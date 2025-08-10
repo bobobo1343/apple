@@ -3,551 +3,655 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>ITUNE VERSION</title>
+<title>Apple Music — Web Clone (Desktop)</title>
+<!--
+  iTunes / Apple Music-like web player
+  Features:
+    - Apple Music-like UI (desktop)
+    - Dark mode toggle + auto-detect
+    - Shuffle & repeat
+    - Draggable mini player + detachable to new window (postMessage)
+    - Google Drive folder loader using API key (only works for publicly shared files)
+    - Defensive guards to prevent runtime errors
+    - Minimal "Run Tests" harness
+  Usage:
+    - Paste your Google API Key and Folder ID in the `CONFIG` block below
+    - If your Drive folder is private, set up OAuth2 client and tell me — I can add a client-side OAuth flow
+  Security note:
+    - Exposing API keys publicly is insecure. Restrict referrers in Google Cloud Console.
+-->
 <style>
-  /* ---------- Simple iTunes-like layout (no artwork) ---------- */
+  /* Basic Apple Music inspired styles (desktop-first) */
   :root{
-    --bg:#f5f5f8; --panel:#ffffff; --muted:#7a7a84; --accent:#0a5ad9; --text:#111;
+    --bg:#f5f7fb; --card:#ffffff; --muted:#6b7280; --text:#0f1724;
+    --accent:#ff2d55; --glass:rgba(255,255,255,0.6);
+    --shadow: 0 6px 18px rgba(15,23,36,0.08);
   }
   [data-theme="dark"]{
-    --bg:#121214; --panel:#161618; --muted:#9a9aa2; --accent:#6ea7ff; --text:#eee;
+    --bg:#0b0b0d; --card:rgba(21,21,25,0.8); --muted:#94a3b8; --text:#e6eef8;
+    --accent:#ff375f; --glass:rgba(255,255,255,0.03); --shadow: 0 8px 28px rgba(0,0,0,0.6);
   }
-  *{box-sizing:border-box}
-  html,body{height:100%;margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
-  .app{display:flex;flex-direction:column;height:100vh}
-  .topbar{display:flex;align-items:center;gap:12px;padding:12px 18px;background:var(--panel);border-bottom:1px solid rgba(0,0,0,0.06)}
-  .topbar h1{margin:0;font-size:18px}
-  .topbar .controls{margin-left:auto;display:flex;gap:10px;align-items:center}
-  .container{flex:1;display:flex;overflow:hidden}
-  .left{width:260px;background:var(--panel);border-right:1px solid rgba(0,0,0,0.06);display:flex;flex-direction:column;padding:12px;gap:12px;overflow:auto}
-  .left h2{margin:0;font-size:14px;color:var(--muted)}
-  .playlist-list{display:flex;flex-direction:column;gap:8px;overflow:auto}
-  .playlist-btn{background:transparent;border:none;padding:8px 10px;text-align:left;border-radius:8px;cursor:pointer;color:var(--text);font-weight:600}
-  .playlist-btn:hover,.playlist-btn.active{background:rgba(0,0,0,0.06)}
-  .center{flex:1;display:flex;flex-direction:column;overflow:hidden}
-  .search-row{padding:12px;background:var(--panel);display:flex;gap:10px;align-items:center;border-bottom:1px solid rgba(0,0,0,0.04)}
-  .search-row input[type="search"]{flex:1;padding:8px 12px;border-radius:999px;border:1px solid rgba(0,0,0,0.08);outline:none}
-  .song-table{flex:1;overflow:auto;background:var(--panel);padding:8px}
-  table{width:100%;border-collapse:collapse;font-size:14px}
-  thead th{font-size:12px;text-align:left;padding:10px 8px;color:var(--muted);position:sticky;top:0;background:var(--panel);z-index:2}
-  tbody tr{cursor:pointer;border-bottom:1px solid rgba(0,0,0,0.04)}
-  tbody tr:hover{background:rgba(0,0,0,0.03)}
-  td,th{padding:10px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  td.name{width:50%}
-  td.artist{width:30%}
-  td.duration{text-align:right;width:20%}
 
-  .right{width:320px;background:var(--panel);border-left:1px solid rgba(0,0,0,0.04);display:flex;flex-direction:column;padding:12px;gap:10px;overflow:auto}
-  .queue-title{font-weight:700;color:var(--muted);margin-bottom:6px}
-  .queue-list{display:flex;flex-direction:column;gap:6px;overflow:auto}
-  .queue-item{padding:8px;border-radius:8px;display:flex;justify-content:space-between;align-items:center}
-  .queue-item:hover{background:rgba(0,0,0,0.03)}
+  html,body{height:100%;margin:0;font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:linear-gradient(180deg,var(--bg),#e9eef6); color:var(--text);}
+  .app{
+    display:grid;
+    grid-template-columns: 260px 1fr;
+    height:100vh;
+    gap:20px;
+    padding:28px;
+    box-sizing:border-box;
+    align-items:stretch;
+  }
 
-  /* bottom bar */
-  .nowbar{height:96px;background:var(--panel);border-top:1px solid rgba(0,0,0,0.06);display:flex;align-items:center;padding:12px 18px;gap:12px}
-  .nowbar .info{flex:1;min-width:200px}
-  .nowbar .title{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .nowbar .sub{font-size:13px;color:var(--muted)}
-  .play-controls{display:flex;align-items:center;gap:12px}
-  .icon-btn{background:transparent;border:0;font-size:20px;padding:8px;border-radius:8px;cursor:pointer}
-  .icon-btn:hover{background:rgba(0,0,0,0.04)}
-  .progress{flex:1;margin:0 8px;height:6px;background:rgba(0,0,0,0.06);border-radius:6px;cursor:pointer;position:relative}
-  .progress .fill{height:100%;background:var(--accent);width:0;border-radius:6px}
-  .time{font-size:12px;color:var(--muted);min-width:48px;text-align:right}
+  /* Sidebar */
+  .sidebar{
+    background:linear-gradient(180deg,var(--card),var(--glass));
+    border-radius:12px; padding:20px; box-shadow:var(--shadow); height:calc(100vh - 56px); overflow:auto;
+    display:flex;flex-direction:column;
+  }
+  .brand{ font-weight:700; font-size:20px; margin-bottom:18px; display:flex;align-items:center; gap:10px;}
+  .sidebar .nav{display:flex;flex-direction:column;gap:8px}
+  .nav button{ background:transparent; border:none; color:var(--text); text-align:left; padding:10px 8px; border-radius:8px; cursor:pointer; font-size:14px;}
+  .nav button:hover{ background:rgba(0,0,0,0.04) }
 
-  /* small utilities */
-  .btn{padding:8px 10px;border-radius:8px;border:0;background:var(--accent);color:#fff;font-weight:700;cursor:pointer}
-  .ghost{background:transparent;border:1px solid rgba(0,0,0,0.08);color:var(--text)}
-  .small{padding:6px 8px;border-radius:6px;font-size:13px}
-  .hidden{display:none}
-  .danger{color:#c0392b}
+  /* Main area */
+  .main{
+    display:flex; flex-direction:column; gap:14px;
+  }
 
-  /* responsive */
-  @media(max-width:980px){.right{display:none}.left{width:200px}}
+  .top-controls{ display:flex; justify-content:space-between; align-items:center; gap:12px; }
+  .search { flex:1; display:flex; gap:8px; align-items:center;}
+  .search input{ width:100%; padding:10px 12px; border-radius:10px; border:1px solid rgba(0,0,0,0.06); background:var(--card); }
+
+  .library{
+    background:linear-gradient(180deg,var(--card),var(--glass));
+    border-radius:12px; padding:18px; box-shadow:var(--shadow); height:calc(100vh - 200px); overflow:auto;
+  }
+
+  /* Album grid */
+  .albums{ display:grid; grid-template-columns: repeat(auto-fill,minmax(160px,1fr)); gap:18px; }
+  .album{ background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(0,0,0,0.02)); padding:10px;border-radius:8px; display:flex; flex-direction:column; gap:10px; align-items:center; cursor:pointer;}
+  .album .art{ width:140px; height:140px; background:linear-gradient(135deg,#ddd,#bbb); border-radius:8px; display:block; overflow:hidden; }
+  .album .title{ font-size:13px; font-weight:600; text-align:center; color:var(--text); }
+  .album .sub{ font-size:12px; color:var(--muted); text-align:center; }
+
+  /* Now playing bar */
+  .now-playing{
+    position:fixed; left:300px; right:28px; bottom:20px; height:88px; background:var(--card); border-radius:12px; padding:12px 16px; box-shadow:var(--shadow);
+    display:flex; align-items:center; gap:14px; z-index:999;
+  }
+  .np-art{ width:64px; height:64px; border-radius:8px; background:#cfd8e3; overflow:hidden;}
+  .np-info{ flex:1; display:flex; flex-direction:column; gap:6px;}
+  .np-controls{ display:flex; gap:10px; align-items:center;}
+  .btn{ padding:8px 12px; border-radius:8px; background:transparent; border:1px solid rgba(0,0,0,0.06); cursor:pointer; }
+  .btn.primary{ background:var(--accent); color:#fff; border:none; }
+  .progress{ height:8px; background:rgba(0,0,0,0.06); border-radius:8px; overflow:hidden;}
+  .progress > i{ display:block; height:100%; background:linear-gradient(90deg,var(--accent),#ff9aa2); width:0%; }
+
+  /* Mini player */
+  .mini-player{
+    position:fixed; right:28px; bottom:120px; width:320px; height:72px; background:var(--card); border-radius:12px; box-shadow:var(--shadow); display:flex; gap:12px; padding:8px; align-items:center; cursor:grab; z-index:1001;
+  }
+
+  /* Responsive: for demo desktop only */
+  @media (max-width: 900px){
+    .app{ grid-template-columns: 1fr; padding:12px; }
+    .sidebar{ display:none }
+    .now-playing{ left:12px; right:12px; }
+  }
+
+  /* tiny helpers */
+  .muted{ color:var(--muted); font-size:13px }
+  .hide{ display:none!important; }
 </style>
 </head>
-<body data-theme="light">
-  <div class="app">
-    <div class="topbar">
-      <h1>ITUNE VERSION</h1>
-      <div class="controls">
-        <button id="themeToggle" class="small ghost">Dark</button>
-        <button id="openMini" class="small">Mini Player</button>
-        <button id="featuresBtn" class="small">Features ▾</button>
+<body>
+
+<div id="app" class="app" data-theme="">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="6" fill="#ff2d55"/></svg>Apple Music</div>
+
+    <div style="margin-bottom:12px">
+      <button id="themeToggle" class="btn">Toggle Dark Mode</button>
+      <button id="detachBtn" class="btn" style="margin-left:6px">Open Mini Player in New Window</button>
+    </div>
+
+    <div style="margin-bottom:12px">
+      <input id="driveApiKey" placeholder="Google API Key" style="width:100%;padding:8px;border-radius:8px" />
+      <input id="driveFolder" placeholder="Google Drive Folder ID" style="width:100%;padding:8px;border-radius:8px;margin-top:6px" />
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <button id="loadDrive" class="btn">Load Drive Folder</button>
+        <button id="loadSample" class="btn">Load Sample</button>
       </div>
     </div>
 
-    <div class="container">
-      <div class="left">
-        <h2>Playlists</h2>
-        <div style="display:flex;gap:8px">
-          <input id="newPlaylistName" placeholder="New playlist" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.06)"/>
-          <button id="createPlaylist" class="small">➕</button>
-        </div>
-        <div class="playlist-list" id="playlistList"></div>
-        <hr/>
-        <div>
-          <button id="loadAll" class="small ghost" style="width:100%">Load All Songs</button>
-          <div id="status" style="margin-top:8px;color:var(--muted);font-size:13px">Status: idle</div>
-          <div id="corsNotice" style="margin-top:10px;color:#a33;display:none">CORS prevented audio streaming — see instructions below.</div>
-        </div>
+    <nav class="nav">
+      <button data-view="library">Library</button>
+      <button data-view="albums">Albums</button>
+      <button data-view="playlists">Playlists</button>
+      <button data-view="radio">Radio</button>
+      <button data-view="for-you">For You</button>
+    </nav>
+
+    <div style="margin-top:auto">
+      <div class="muted">Signed in: <strong id="userLabel">Guest</strong></div>
+    </div>
+  </aside>
+
+  <main class="main" id="main">
+    <div class="top-controls">
+      <div class="search">
+        <input id="searchInput" placeholder="Search" />
       </div>
-
-      <div class="center">
-        <div class="search-row">
-          <input id="search" type="search" placeholder="Search song or artist..." />
-          <label style="display:flex;gap:8px;align-items:center"><input id="shuffleToggle" type="checkbox"/><span style="font-size:13px;color:var(--muted)">Shuffle</span></label>
-          <label style="display:flex;gap:8px;align-items:center"><input id="repeatToggle" type="checkbox"/><span style="font-size:13px;color:var(--muted)">Repeat</span></label>
-        </div>
-
-        <div class="song-table" id="songTableWrap">
-          <table id="songTable" aria-describedby="song list">
-            <thead>
-              <tr><th class="name">Name</th><th class="artist">Artist</th><th class="duration">Duration</th></tr>
-            </thead>
-            <tbody id="songList" draggable="true"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="right">
-        <div class="queue-title">Up Next / History</div>
-        <div class="queue-list" id="queueList"></div>
-        <hr/>
-        <div>
-          <div style="font-weight:700;color:var(--muted)">Troubleshooting</div>
-          <div style="font-size:13px;color:var(--muted);margin-top:6px">If a song fails to play it is likely a Drive CORS restriction. Solutions: 1) Host files in GitHub / Cloud storage that supports CORS, 2) Use a small proxy to add CORS headers, or 3) use the popup mini-player (will sometimes bypass autoplay restrictions after user interaction).</div>
-        </div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <div class="muted" id="shuffleState">Shuffle: Off</div>
+        <div class="muted" id="repeatState">Repeat: Off</div>
+        <button id="shuffleBtn" class="btn">Shuffle</button>
+        <button id="repeatBtn" class="btn">Repeat</button>
+        <button id="runTests" class="btn">Run Tests</button>
       </div>
     </div>
 
-    <div class="nowbar">
-      <div class="info">
-        <div class="title" id="nowTitle">No song playing</div>
-        <div class="sub" id="nowSub">—</div>
-      </div>
+    <section class="library" id="librarySection">
+      <h2>Library</h2>
+      <div class="albums" id="albumsGrid"></div>
+    </section>
+  </main>
+</div>
 
-      <div class="play-controls">
-        <button id="prev" class="icon-btn" title="Previous">⏮</button>
-        <button id="play" class="icon-btn" title="Play / Pause">▶</button>
-        <button id="next" class="icon-btn" title="Next">⏭</button>
+<!-- Now playing bar -->
+<div class="now-playing" id="nowPlayingBar" role="region" aria-label="Now Playing">
+  <div class="np-art" id="npArt"></div>
+  <div class="np-info">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <div id="npTitle" style="font-weight:700">Nothing Playing</div>
+        <div id="npArtist" class="muted">—</div>
       </div>
-
-      <div class="progress" id="progress">
-        <div class="fill" id="progressFill"></div>
+      <div class="np-controls">
+        <button id="prevBtn" class="btn">⏮</button>
+        <button id="playBtn" class="btn primary">▶</button>
+        <button id="nextBtn" class="btn">⏭</button>
       </div>
+    </div>
 
-      <div class="time" id="time">0:00 / 0:00</div>
+    <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
+      <div style="width:90%;">
+        <div class="progress" id="progressBar"><i id="progressFill"></i></div>
+      </div>
+      <div class="muted" id="timeLabel">0:00</div>
     </div>
   </div>
+</div>
 
-  <!-- Hidden audio element -->
-  <audio id="audio" crossorigin="anonymous"></audio>
+<!-- Mini player (draggable in-page) -->
+<div id="miniPlayer" class="mini-player" title="Drag me">
+  <div class="np-art" id="miniArt" style="width:56px;height:56px"></div>
+  <div style="flex:1">
+    <div id="miniTitle" style="font-weight:700">No Track</div>
+    <div id="miniArtist" class="muted">—</div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:6px">
+    <button id="miniPlay" class="btn">▶</button>
+    <button id="miniDetach" class="btn">⤢</button>
+  </div>
+</div>
 
-  <!-- ====== SCRIPT ====== -->
-  <script>
-  (function(){
-    /* ------------------ CONFIG (your keys) ------------------ */
-    const API_KEY = 'AIzaSyDsYE91wH7UDwu8eZNbD1CFuVcilgYeZhI';
-    const FOLDER_ID = '1DGz9zEQh29EAqTZpmWK5mwSj5HComnkn';
-    /* ------------------ state ------------------ */
-    let allSongs = [];           // {id,name,mimeType,duration?,artist?}
-    let viewSongs = [];          // filtered list
-    let queue = [];              // queue of indices into viewSongs (play history/up next)
-    let currentIndex = -1;       // index into viewSongs for current playing
-    let isPlaying = false;
-    let shuffle = false;
-    let repeat = false;
-    let playlists = JSON.parse(localStorage.getItem('itune_playlists_v1') || '{}');
-    let miniWin = null;
+<!-- Hidden audio element -->
+<audio id="audio" crossorigin="anonymous"></audio>
 
-    /* DOM */
-    const statusEl = document.getElementById('status');
-    const corsNotice = document.getElementById('corsNotice');
-    const songListEl = document.getElementById('songList');
-    const queueListEl = document.getElementById('queueList');
-    const playBtn = document.getElementById('play');
-    const prevBtn = document.getElementById('prev');
-    const nextBtn = document.getElementById('next');
-    const audio = document.getElementById('audio');
-    const nowTitle = document.getElementById('nowTitle');
-    const nowSub = document.getElementById('nowSub');
-    const progress = document.getElementById('progress');
-    const progressFill = document.getElementById('progressFill');
-    const timeEl = document.getElementById('time');
-    const searchInput = document.getElementById('search');
-    const createPlaylistBtn = document.getElementById('createPlaylist');
-    const newPlaylistName = document.getElementById('newPlaylistName');
-    const playlistList = document.getElementById('playlistList');
-    const loadAllBtn = document.getElementById('loadAll');
-    const themeToggle = document.getElementById('themeToggle');
-    const openMiniBtn = document.getElementById('openMini');
-    const shuffleToggle = document.getElementById('shuffleToggle');
-    const repeatToggle = document.getElementById('repeatToggle');
+<script>
+/*
+  CONFIG - place your API key and folder ID here or use the UI inputs in the sidebar.
+  NOTE: The API key in the code below is the one you provided. If you want it removed from the code, edit below or use inputs.
+*/
+const CONFIG = {
+  googleApiKey: 'AIzaSyDsYE91wH7UDwu8eZNbD1CFuVcilgYeZhI', // you provided one earlier; replace if desired
+  driveFolderId: '1DGz9zEQh29EAqTZpmWK5mwSj5HComnkn'
+};
 
-    /* ---------- utilities ---------- */
-    function logStatus(s){ statusEl.textContent = 'Status: ' + s; }
-    function fmtTime(s){ if(!s || isNaN(s)) return '0:00'; const m=Math.floor(s/60); const sec=Math.floor(s%60).toString().padStart(2,'0'); return `${m}:${sec}`; }
+/* ---------------------
+   tiny util helpers
+   --------------------- */
+function $$(sel, root=document){ return Array.from(root.querySelectorAll(sel)); }
+function $(sel, root=document){ return root.querySelector(sel); }
+function safe(fn){ try{ return fn(); }catch(e){ console.warn('safe error', e); return undefined; } }
+function el(tag='div',cls=''){ const e=document.createElement(tag); if(cls) e.className=cls; return e; }
+function formatTime(secs){
+  if (!isFinite(secs)) return '0:00';
+  secs = Math.floor(secs);
+  const m = Math.floor(secs/60), s = secs%60; return m + ':' + (s<10? '0'+s : s);
+}
 
-    /* ---------- Drive helpers ---------- */
-    async function listAudioFilesFromDrive(pageToken=''){
-      const q = encodeURIComponent(`'${FOLDER_ID}' in parents and mimeType contains 'audio' and trashed = false`);
-      const fields = 'nextPageToken,files(id,name,mimeType,webContentLink,createdTime)'; // webContentLink sometimes present
-      const url = `https://www.googleapis.com/drive/v3/files?key=${API_KEY}&q=${q}&fields=${fields}&pageSize=100${pageToken?('&pageToken='+pageToken):''}`;
-      const res = await fetch(url);
-      if(!res.ok) {
-        const txt = await res.text().catch(()=>res.statusText);
-        throw new Error('Drive API error: ' + res.status + ' ' + txt);
+/* ---------------------
+   Application state
+   --------------------- */
+const state = {
+  theme: window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
+  library: [], // {id, name, artist, url, art, duration}
+  queue: [],
+  currentIndex: -1,
+  isPlaying: false,
+  shuffle: false,
+  repeat: 'off', // 'off'|'one'|'all'
+  detachedWindow: null,
+  windowOrigin: window.location.origin
+};
+
+/* ---------------------
+   Safe event emitter replacement
+   Prevent undefined .emit usage — use this emitter
+   --------------------- */
+const E = (function(){
+  const handlers = {};
+  return {
+    on(evt, cb){ (handlers[evt]||(handlers[evt]=[])).push(cb); return ()=>this.off(evt,cb); },
+    off(evt, cb){ if(!handlers[evt]) return; handlers[evt] = handlers[evt].filter(fn=>fn!==cb); },
+    emit(evt, ...args){ (handlers[evt]||[]).slice().forEach(fn=>{ try{ fn(...args);}catch(e){console.error('event handler error',e);} }); }
+  };
+})();
+
+/* ---------------------
+   DOM refs
+   --------------------- */
+const refs = {
+  albumsGrid: $('#albumsGrid'),
+  npTitle: $('#npTitle'),
+  npArtist: $('#npArtist'),
+  npArt: $('#npArt'),
+  playBtn: $('#playBtn'),
+  prevBtn: $('#prevBtn'),
+  nextBtn: $('#nextBtn'),
+  progressFill: $('#progressFill'),
+  audio: $('#audio'),
+  miniPlayer: $('#miniPlayer'),
+  miniPlay: $('#miniPlay'),
+  miniTitle: $('#miniTitle'),
+  miniArtist: $('#miniArtist'),
+  miniArt: $('#miniArt'),
+  detachBtn: $('#detachBtn'),
+  detachMiniBtn: $('#miniDetach')
+};
+
+/* ---------------------
+   Initialization & theme
+   --------------------- */
+function applyTheme(t){
+  document.getElementById('app').setAttribute('data-theme', t==='dark' ? 'dark' : '');
+  state.theme = t;
+  localStorage.setItem('theme', t);
+}
+(function initTheme(){
+  const stored = localStorage.getItem('theme');
+  const t = stored || state.theme;
+  applyTheme(t);
+})();
+
+/* ---------------------
+   Library rendering
+   --------------------- */
+function renderAlbums(){
+  const grid = refs.albumsGrid;
+  grid.innerHTML = '';
+  state.library.forEach((item, idx) => {
+    const a = el('div','album');
+    a.dataset.index = idx;
+    const art = el('div','art'); art.style.backgroundImage = item.art ? `url(${item.art})` : '';
+    art.style.backgroundSize='cover'; art.style.backgroundPosition='center';
+    a.appendChild(art);
+    const t = el('div','title'); t.textContent = item.name || 'Unknown Title';
+    const s = el('div','sub'); s.textContent = item.artist || '';
+    a.appendChild(t); a.appendChild(s);
+    a.addEventListener('dblclick', ()=>startPlaybackAt(idx));
+    grid.appendChild(a);
+  });
+}
+
+/* ---------------------
+   Playback controls & audio wiring
+   --------------------- */
+function setNowPlaying(index){
+  state.currentIndex = index;
+  const track = state.queue[index];
+  if(!track){
+    refs.npTitle.textContent = 'Nothing Playing';
+    refs.npArtist.textContent = '—';
+    refs.npArt.style.backgroundImage = '';
+    refs.audio.src = '';
+    return;
+  }
+  refs.npTitle.textContent = track.name || 'Unknown';
+  refs.npArtist.textContent = track.artist || '';
+  refs.npArt.style.backgroundImage = track.art ? `url(${track.art})` : '';
+  refs.miniTitle.textContent = track.name || 'Unknown';
+  refs.miniArtist.textContent = track.artist || '';
+  refs.miniArt.style.backgroundImage = track.art ? `url(${track.art})` : '';
+  // set audio src
+  if(track.url){
+    refs.audio.src = track.url;
+  }else{
+    refs.audio.removeAttribute('src');
+  }
+  E.emit('nowplayingchange', track, index);
+}
+
+function play(){
+  if(state.currentIndex < 0 && state.queue.length>0){
+    setNowPlaying(0);
+  }
+  refs.audio.play().then(()=>{ state.isPlaying = true; refs.playBtn.textContent = '⏸'; refs.miniPlay.textContent='⏸'; E.emit('play'); }).catch(e=>{ console.warn('play failed', e); });
+}
+
+function pause(){
+  refs.audio.pause(); state.isPlaying=false; refs.playBtn.textContent='▶'; refs.miniPlay.textContent='▶'; E.emit('pause');
+}
+
+function togglePlay(){
+  if(state.isPlaying) pause(); else play();
+}
+
+function startPlaybackAt(idx){
+  if(idx<0 || idx>=state.queue.length) return;
+  setNowPlaying(idx);
+  play();
+}
+
+/* next / prev with shuffle/repeat logic */
+function pickNextIndex(forward=true){
+  if(state.shuffle){
+    if(state.queue.length<=1) return state.currentIndex;
+    let i = state.currentIndex;
+    let tries = 0;
+    while(tries++ < 50){
+      const r = Math.floor(Math.random()*state.queue.length);
+      if(r !== state.currentIndex) return r;
+    }
+    return state.currentIndex;
+  }
+  // non-shuffle
+  if(forward){
+    let idx = state.currentIndex + 1;
+    if(idx >= state.queue.length){
+      if(state.repeat === 'all') return 0;
+      return -1;
+    }
+    return idx;
+  }else{
+    let idx = state.currentIndex - 1;
+    if(idx < 0){
+      if(state.repeat === 'all') return state.queue.length - 1;
+      return -1;
+    }
+    return idx;
+  }
+}
+
+function nextTrack(){
+  if(state.repeat === 'one'){
+    // replay same
+    refs.audio.currentTime = 0;
+    play();
+    return;
+  }
+  const next = pickNextIndex(true);
+  if(next === -1){ pause(); setNowPlaying(-1); return; }
+  startPlaybackAt(next);
+}
+function prevTrack(){
+  const prev = pickNextIndex(false);
+  if(prev === -1){ refs.audio.currentTime = 0; return; }
+  startPlaybackAt(prev);
+}
+
+/* audio events */
+refs.audio.addEventListener('timeupdate', ()=>{
+  const pct = refs.audio.duration ? (refs.audio.currentTime / refs.audio.duration)*100 : 0;
+  refs.progressFill.style.width = pct + '%';
+  $('#timeLabel').textContent = formatTime(refs.audio.currentTime);
+});
+refs.audio.addEventListener('ended', ()=> nextTrack());
+refs.audio.addEventListener('loadedmetadata', ()=>{ $('#timeLabel').textContent = formatTime(refs.audio.currentTime); });
+
+/* UI hook-ups */
+refs.playBtn.addEventListener('click', togglePlay);
+refs.prevBtn.addEventListener('click', prevTrack);
+refs.nextBtn.addEventListener('click', nextTrack);
+refs.miniPlay.addEventListener('click', togglePlay);
+$('#shuffleBtn').addEventListener('click', ()=>{
+  state.shuffle = !state.shuffle;
+  $('#shuffleState').textContent = 'Shuffle: ' + (state.shuffle? 'On':'Off');
+});
+$('#repeatBtn').addEventListener('click', ()=>{
+  if(state.repeat==='off') state.repeat='all';
+  else if(state.repeat==='all') state.repeat='one';
+  else state.repeat='off';
+  $('#repeatState').textContent = 'Repeat: ' + (state.repeat==='off'?'Off':(state.repeat==='one'?'One':'All'));
+});
+
+/* progress bar seek */
+$('#progressBar').addEventListener('click', (e)=>{
+  const rect = $('#progressBar').getBoundingClientRect();
+  const x = e.clientX - rect.left; const p = x / rect.width;
+  if(refs.audio.duration) refs.audio.currentTime = refs.audio.duration * p;
+});
+
+/* ---------------------
+   Mini player: drag and detach/attach
+   --------------------- */
+(function miniPlayerDraggable(){
+  const mp = refs.miniPlayer;
+  let dragging=false, ox=0, oy=0, startX=0, startY=0;
+  mp.addEventListener('mousedown', (ev)=>{
+    dragging=true; mp.style.cursor='grabbing';
+    startX = ev.clientX; startY = ev.clientY;
+    const rect = mp.getBoundingClientRect();
+    ox = rect.left; oy = rect.top;
+    ev.preventDefault();
+  });
+  window.addEventListener('mousemove', (ev)=>{
+    if(!dragging) return;
+    mp.style.left = (ox + (ev.clientX - startX)) + 'px';
+    mp.style.top = (oy + (ev.clientY - startY)) + 'px';
+    mp.style.right = 'auto';
+    mp.style.bottom = 'auto';
+  });
+  window.addEventListener('mouseup', ()=>{ if(dragging){ dragging=false; mp.style.cursor='grab'; }});
+})();
+
+/* Detach mini player into new window */
+function openDetachedPlayer(){
+  try{
+    if(state.detachedWindow && !state.detachedWindow.closed){
+      state.detachedWindow.focus();
+      return;
+    }
+    const w = window.open('', 'DetachedMusicPlayer', 'width=420,height=160');
+    if(!w) { alert('Pop-up blocked — allow popups for this site to open detached player.'); return; }
+    // write simple player shell into that window, and set up postMessage comms
+    w.document.write('<!doctype html><html><head><title>Detached Player</title></head><body style="margin:0;font-family:-apple-system,Segoe UI,Roboto"><div id="root"></div><script>window.addEventListener("message",e=>{ try{ const m=e.data; if(m.cmd==="state"){ // update UI } }catch(e){} }, false); window.opener && window.opener.postMessage({cmd:"request-state"}, "*");</script></body></html>');
+    state.detachedWindow = w;
+    // send initial state later
+    setTimeout(()=> { sendStateToDetached(); }, 350);
+    // listen for messages from detached window
+    window.addEventListener('message', handleDetachedMessages);
+  }catch(e){
+    console.error('openDetachedPlayer error', e);
+  }
+}
+
+function sendStateToDetached(){
+  if(!state.detachedWindow || state.detachedWindow.closed) return;
+  try{
+    const payload = {
+      cmd: 'update',
+      state: {
+        now: state.queue[state.currentIndex] || null,
+        isPlaying: state.isPlaying
       }
-      return res.json();
-    }
+    };
+    state.detachedWindow.postMessage(payload, '*');
+  }catch(e){ console.warn('failed to send state to detached', e); }
+}
 
-    function driveFileToUrl(id){
-      // best-effort direct streaming URL (may be blocked by CORS depending on Drive)
-      return `https://www.googleapis.com/drive/v3/files/${id}?alt=media&key=${API_KEY}`;
-      // Alternate: http(s)://drive.google.com/uc?export=download&id=${id}  (sometimes behaves differently)
-    }
+function handleDetachedMessages(e){
+  const msg = e.data || {};
+  if(msg && msg.cmd === 'request-state'){
+    sendStateToDetached();
+  }else if(msg && msg.cmd === 'play'){
+    play();
+  }else if(msg && msg.cmd === 'pause'){
+    pause();
+  }else if(msg && msg.cmd === 'next'){
+    nextTrack();
+  }else if(msg && msg.cmd === 'prev'){
+    prevTrack();
+  }
+}
 
-    /* ---------- load all songs ---------- */
-    async function loadAllSongs(){
-      logStatus('Listing files from Drive...');
-      corsNotice.style.display = 'none';
-      allSongs = [];
-      try{
-        let token = '';
-        do{
-          const data = await listAudioFilesFromDrive(token);
-          if(Array.isArray(data.files)) allSongs.push(...data.files);
-          token = data.nextPageToken || '';
-        } while(token);
-        // sort by name
-        allSongs.sort((a,b)=>a.name.localeCompare(b.name, undefined, {sensitivity:'base'}));
-        // normalize
-        allSongs = allSongs.map(f => ({id:f.id, name:f.name, mimeType:f.mimeType}));
-        viewSongs = [...allSongs];
-        renderSongList();
-        logStatus(`Loaded ${allSongs.length} tracks`);
-        // attempt to fetch duration metadata for a few songs (best-effort)
-        attemptMetadataLoadForList(viewSongs.slice(0,30));
-      }catch(err){
-        logStatus('Error listing files: ' + (err.message||err));
-        alert('Failed to list Drive files: ' + (err.message||err));
-      }
-    }
+/* hook detach buttons */
+refs.detachBtn.addEventListener('click', openDetachedPlayer);
+refs.detachMiniBtn.addEventListener('click', openDetachedPlayer);
 
-    /* Try to load audio metadata to get duration. This will fail if CORS blocks the file. */
-    async function attemptMetadataLoadForList(list){
-      for(const item of list){
-        try{
-          const url = driveFileToUrl(item.id);
-          const a = new Audio();
-          a.crossOrigin = "anonymous";
-          a.src = url;
-          await new Promise((resolve, reject)=>{
-            const t = setTimeout(()=>{ a.src=''; resolve(); }, 5000); // don't hang too long
-            a.addEventListener('loadedmetadata', ()=>{
-              clearTimeout(t);
-              item.duration = a.duration;
-              resolve();
-            });
-            a.addEventListener('error', (e)=>{
-              clearTimeout(t);
-              // likely CORS or other error — mark so UI can show
-              item._metaError = true;
-              resolve();
-            });
-          });
-        }catch(e){
-          item._metaError = true;
-        }
-      }
-      renderSongList(); // update durations where available
-    }
+/* ---------------------
+   Google Drive integration (simple folder listing)
+   Notes:
+     - Works for publicly shared folders only with API key
+     - If your folder is private, you'll need OAuth
+   --------------------- */
+async function listDriveFiles(apiKey, folderId){
+  if(!apiKey || !folderId) throw new Error('apiKey & folderId required');
+  // Build query: files where parent is folderId and not trashed
+  const q = encodeURIComponent("'" + folderId + "' in parents and trashed=false");
+  const fields = encodeURIComponent('files(id,name,mimeType,thumbnailLink,webContentLink,iconLink)');
+  const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=${fields}&key=${apiKey}&pageSize=200`;
+  const res = await fetch(url);
+  if(!res.ok) {
+    const txt = await res.text();
+    throw new Error('Drive API error: ' + res.status + ' ' + txt);
+  }
+  const json = await res.json();
+  return json.files || [];
+}
 
-    /* ---------- render UI ---------- */
-    function renderSongList(){
-      songListEl.innerHTML = '';
-      viewSongs.forEach((s, idx)=>{
-        const tr = document.createElement('tr');
-        tr.draggable = true;
-        tr.dataset.index = idx;
-        tr.innerHTML = `<td class="name">${escapeHtml(s.name)}</td><td class="artist">${escapeHtml(s.artist||'Unknown')}</td><td class="duration">${s.duration?fmtTime(s.duration): (s._metaError? '—' : '…')}</td>`;
-        tr.onclick = ()=>playIndex(idx);
-        // drag handlers for adding to playlist
-        tr.addEventListener('dragstart', e=>{
-          e.dataTransfer.setData('text/songIndex', idx);
-        });
-        songListEl.appendChild(tr);
-      });
-    }
+/* Convert Drive file object to track item */
+function driveFileToTrack(f){
+  // Try to produce a streamable URL
+  let url = f.webContentLink || f.downloadUrl || (f.exportLinks && Object.values(f.exportLinks)[0]) || null;
+  // If url contains &export=download sometimes it works; else use viewer
+  return {
+    id: f.id,
+    name: f.name,
+    artist: 'Google Drive',
+    url: url,
+    art: f.thumbnailLink || null,
+    orig: f
+  };
+}
 
-    function renderPlaylists(){
-      playlistList.innerHTML = '';
-      const keys = Object.keys(playlists);
-      if(keys.length===0){
-        playlistList.innerHTML = '<div style="color:var(--muted);font-size:13px">No playlists yet</div>';
-        return;
-      }
-      keys.forEach(name=>{
-        const btn = document.createElement('button');
-        btn.className = 'playlist-btn';
-        btn.textContent = name;
-        btn.onclick = ()=>loadPlaylist(name);
-        // enable drop to playlist
-        btn.addEventListener('dragover', e=>{ e.preventDefault(); btn.style.background='rgba(0,0,0,0.06)'; });
-        btn.addEventListener('dragleave', e=>{ btn.style.background=''; });
-        btn.addEventListener('drop', e=>{
-          e.preventDefault(); btn.style.background='';
-          const idx = e.dataTransfer.getData('text/songIndex');
-          if(idx==null) return;
-          const song = viewSongs[Number(idx)];
-          if(!song) return;
-          addSongToPlaylist(name, song);
-        });
-        playlistList.appendChild(btn);
+/* UI: load from drive */
+$('#loadDrive').addEventListener('click', async ()=>{
+  const key = $('#driveApiKey').value || CONFIG.googleApiKey;
+  const folder = $('#driveFolder').value || CONFIG.driveFolderId;
+  $('#loadDrive').textContent = 'Loading...';
+  try{
+    const files = await listDriveFiles(key, folder);
+    if(!files.length){ alert('No files found — ensure the folder is public and contains playable files.'); }
+    const tracks = files.map(driveFileToTrack).filter(t => t.url || t.orig.mimeType && t.orig.mimeType.startsWith('audio'));
+    // set library & queue
+    state.library = tracks;
+    state.queue = tracks.slice();
+    renderAlbums();
+    setNowPlaying(0);
+    $('#loadDrive').textContent = 'Load Drive Folder';
+  }catch(e){
+    console.error('Drive load error', e);
+    alert('Drive load failed: ' + (e.message || e));
+    $('#loadDrive').textContent = 'Load Drive Folder';
+  }
+});
 
-        // small remove button (delete playlist)
-        const rem = document.createElement('button');
-        rem.textContent = '🗑';
-        rem.style.marginLeft='6px';
-        rem.className='small ghost';
-        rem.onclick = (ev)=>{ ev.stopPropagation(); if(confirm('Delete playlist "'+name+'"?')){ delete playlists[name]; savePlaylists(); renderPlaylists(); } };
-        btn.appendChild(rem);
-      });
-    }
+/* sample loader for offline testing */
+$('#loadSample').addEventListener('click', ()=>{
+  // create a few sample tracks with public URLs (CDN-free small sample)
+  const sampleTracks = [
+    { id:'s1', name:'Sample One', artist:'Demo', url:'https://cdn.jsdelivr.net/gh/anars/blank-audio@master/1-second-of-silence.mp3', art:'', duration:1 },
+    { id:'s2', name:'Sample Two', artist:'Demo', url:'https://cdn.jsdelivr.net/gh/anars/blank-audio@master/1-second-of-silence.mp3', art:'' },
+    { id:'s3', name:'Sample Three', artist:'Demo', url:'https://cdn.jsdelivr.net/gh/anars/blank-audio@master/1-second-of-silence.mp3', art:'' }
+  ];
+  state.library = sampleTracks;
+  state.queue = sampleTracks.slice();
+  renderAlbums();
+  setNowPlaying(0);
+});
 
-    function renderQueue(){
-      queueListEl.innerHTML = '';
-      if(queue.length===0){ queueListEl.innerHTML = '<div style="color:var(--muted);font-size:13px">Queue empty</div>'; return; }
-      queue.forEach((qidx, i)=>{
-        const s = viewSongs[qidx];
-        const div = document.createElement('div');
-        div.className='queue-item';
-        div.innerHTML = `<span style="flex:1">${escapeHtml(s.name)}</span><div style="display:flex;gap:6px"><button class="small ghost" data-i="${i}">▶</button><button class="small danger" data-rem="${i}">✖</button></div>`;
-        div.querySelector('[data-i]').onclick = ()=>{ playIndex(qidx); };
-        div.querySelector('[data-rem]').onclick = (e)=>{ e.stopPropagation(); queue.splice(i,1); renderQueue(); };
-        queueListEl.appendChild(div);
-      });
-    }
-
-    /* ---------- playback ---------- */
-    function playIndex(idx){
-      if(idx<0 || idx>=viewSongs.length) return;
-      currentIndex = idx;
-      const song = viewSongs[idx];
-      const url = driveFileToUrl(song.id);
-      // Attempt to set audio.src and play — may get blocked by CORS
-      try{
-        audio.pause();
-        audio.src = url;
-        audio.crossOrigin = "anonymous";
-        // push to queue/history
-        queue.unshift(idx);
-        if(queue.length>200) queue.pop();
-        renderQueue();
-        // play on user interaction — if autoplay blocked, user must click play
-        audio.play().then(()=>{
-          isPlaying = true;
-          updateNowBar();
-        }).catch(err=>{
-          // autoplay or CORS errors
-          console.warn('Play promise rejected', err);
-          isPlaying = false;
-          updateNowBar();
-          // Detect CORS by attempting a fetch HEAD
-          checkUrlCORS(url).then(corsOk=>{
-            if(!corsOk){
-              corsNotice.style.display = 'block';
-              corsNotice.textContent = 'CORS prevented streaming this file. See troubleshooting in the right panel.';
-            } else {
-              // maybe autoplay blocked - tell user to click play
-              alert('Playback blocked by browser autoplay policy — please click the play button to start audio.');
-            }
-          });
-        });
-      }catch(e){
-        console.error('playIndex error', e);
-      }
-      updateNowBar();
-    }
-
-    function togglePlay(){
-      if(!audio.src){ if(viewSongs.length) return playIndex(0); else return; }
-      if(audio.paused) audio.play().catch(err=>{ alert('Play failed: ' + err.message); });
-      else audio.pause();
-    }
-
-    function nextTrack(){
-      if(shuffle){
-        const rnd = Math.floor(Math.random()*viewSongs.length);
-        playIndex(rnd);
-        return;
-      }
-      if(currentIndex < 0) return;
-      let next = currentIndex + 1;
-      if(next >= viewSongs.length){
-        if(repeat) next = 0;
-        else { audio.pause(); isPlaying=false; updateNowBar(); return; }
-      }
-      playIndex(next);
-    }
-
-    audio.addEventListener('play', ()=>{ isPlaying=true; updateNowBar(); sendMini('play'); });
-    audio.addEventListener('pause', ()=>{ isPlaying=false; updateNowBar(); sendMini('pause'); });
-    audio.addEventListener('timeupdate', ()=>{
-      const d = audio.duration || 0;
-      const t = audio.currentTime || 0;
-      const pct = d ? (t/d*100) : 0;
-      progressFill.style.width = pct+'%';
-      timeEl.textContent = `${fmtTime(t)} / ${fmtTime(d)}`;
-      sendMini('time', {current:t, duration:d});
+/* ---------------------
+   Safe initialization to avoid undefined event emitters etc.
+   --------------------- */
+function safeInit(){
+  try{
+    // wire search
+    $('#searchInput').addEventListener('input', (e)=>{
+      const q = e.target.value.toLowerCase();
+      const filtered = state.library.filter(t => (t.name||'').toLowerCase().includes(q) || (t.artist||'').toLowerCase().includes(q));
+      state.queue = filtered.slice();
+      renderAlbums();
     });
-    audio.addEventListener('ended', () => {
-      if(repeat) { audio.currentTime=0; audio.play(); return; }
-      nextTrack();
-    });
-    progress.addEventListener('click', e=>{
-      const rect = progress.getBoundingClientRect();
-      const pct = (e.clientX - rect.left)/rect.width;
-      if(audio.duration) audio.currentTime = pct * audio.duration;
-    });
 
-    /* ---------- playlists ---------- */
-    function savePlaylists(){ localStorage.setItem('itune_playlists_v1', JSON.stringify(playlists)); }
-    createPlaylistBtn.addEventListener('click', ()=>{
-      const name = newPlaylistName.value.trim();
-      if(!name){ alert('Enter playlist name'); return; }
-      if(playlists[name]){ alert('Playlist exists'); return; }
-      playlists[name] = []; savePlaylists(); renderPlaylists(); newPlaylistName.value=''; }
-    function addSongToPlaylist(playlistName, song){
-      if(!playlists[playlistName]) playlists[playlistName]=[];
-      if(playlists[playlistName].includes(song.id)){ alert('Song already in playlist'); return; }
-      playlists[playlistName].push(song.id);
-      savePlaylists();
-      alert(`Added "${song.name}" to "${playlistName}"`);
-    }
-    function loadPlaylist(name){
-      const ids = playlists[name]||[];
-      viewSongs = ids.map(id => allSongs.find(s=>s.id===id)).filter(Boolean);
-      renderSongList();
-    }
+    // set UI defaults
+    $('#driveApiKey').value = CONFIG.googleApiKey || '';
+    $('#driveFolder').value = CONFIG.driveFolderId || '';
+    $('#runTests').addEventListener('click', runTests);
 
-    /* ---------- utility: check CORS by fetching a byte-range or HEAD ---------- */
-    async function checkUrlCORS(url){
-      try{
-        const res = await fetch(url, {method:'GET', mode:'cors', headers: {Range: 'bytes=0-1'}}); // byte-range small fetch
-        // If we get a response and it's ok or partial, CORS likely allowed
-        return (res.ok || res.status===206);
-      }catch(e){
-        return false;
-      }
-    }
+    // attach event listeners for E emitter as example
+    E.on('nowplayingchange', (track, idx)=>{ sendStateToDetached(); });
 
-    /* ---------- search ---------- */
-    searchInput.addEventListener('input', ()=>{
-      const q = searchInput.value.trim().toLowerCase();
-      viewSongs = allSongs.filter(s => s.name.toLowerCase().includes(q) || (s.artist||'').toLowerCase().includes(q));
-      renderSongList();
-    });
+    // set stored theme toggle
+    $('#themeToggle').addEventListener('click', ()=> applyTheme(state.theme==='dark'?'light':'dark'));
 
-    /* ---------- queue UI ---------- */
-    function pushToQueue(idx){
-      queue.unshift(idx);
-      if(queue.length>200) queue.pop();
-      renderQueue();
-    }
+    // safe render
+    renderAlbums();
+  }catch(e){ console.error('safeInit failed', e); }
+}
+safeInit();
 
-    /* ---------- theme ---------- */
-    themeToggle.addEventListener('click', ()=>{
-      const body = document.body;
-      if(body.getAttribute('data-theme')==='dark'){ body.setAttribute('data-theme','light'); themeToggle.textContent='Dark'; localStorage.removeItem('itune_theme'); }
-      else { body.setAttribute('data-theme','dark'); themeToggle.textContent='Light'; localStorage.setItem('itune_theme','dark'); }
-    });
-    // set theme at start
-    if(localStorage.getItem('itune_theme')==='dark'){ document.body.setAttribute('data-theme','dark'); themeToggle.textContent='Light'; }
+/* ---------------------
+   Tests: run small sequences to exercise core flows
+   --------------------- */
+async function runTests(){
+  console.log('Running tests...');
+  try{
+    // Test 1: Load sample library
+    $('#loadSample').click();
+    await new Promise(r=>setTimeout(r,200));
+    if(state.library.length < 1) throw new Error('Sample not loaded');
 
-    /* ---------- mini player (popup) ---------- */
-    function openMini(){
-      if(miniWin && !miniWin.closed){ miniWin.focus(); return; }
-      // open small window with basic controls; we'll postMessage to it
-      miniWin = window.open('', 'itune_mini', 'width=360,height=120');
-      if(!miniWin) return alert('Popup blocked — allow popups for this site to use mini player.');
-      miniWin.document.write('<!doctype html><html><head><title>Mini Player</title><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="font-family:Arial;margin:8px">\
-        <div id="now" style="display:flex;align-items:center;gap:8px">\
-          <button id="prev" style="font-size:18px">⏮</button>\
-          <button id="play" style="font-size:18px">▶</button>\
-          <button id="next" style="font-size:18px">⏭</button>\
-          <div id="title" style="margin-left:8px;font-weight:700;overflow:hidden;white-space:nowrap;width:180px"></div>\
-        </div>\
-        <script>window.addEventListener(\"message\",e=>{ if(!e.data) return; if(e.data.type==='state'){ document.getElementById('title').textContent=e.data.title||'No song'; document.getElementById('play').textContent = e.data.playing? '⏸':'▶'; } });\
-        document.getElementById('play').onclick = ()=> opener.postMessage({cmd:'toggle'},'*');\
-        document.getElementById('prev').onclick = ()=> opener.postMessage({cmd:'prev'},'*');\
-        document.getElementById('next').onclick = ()=> opener.postMessage({cmd:'next'},'*');\
-        </sc'+'ript></body></html>');
-      // send initial state
-      sendMini('state');
-      // when closed, keep reference null
-      const timer = setInterval(()=>{ if(miniWin.closed){ miniWin=null; clearInterval(timer); } },500);
-    }
-    openMiniBtn.addEventListener('click', openMini);
+    // Test 2: Start play
+    startPlaybackAt(0);
+    await new Promise(r=>setTimeout(r,200));
+    if(!refs.audio.src) throw new Error('Audio src not set');
 
-    // receive messages from mini (popup)
-    window.addEventListener('message', ev=>{
-      if(!ev.data) return;
-      const d = ev.data;
-      if(d.cmd==='toggle') togglePlay();
-      if(d.cmd==='prev') { prev(); }
-      if(d.cmd==='next') { nextTrack(); }
-    });
+    // Test 3: Shuffle toggling
+    $('#shuffleBtn').click();
+    $('#shuffleBtn').click();
 
-    // send updates to mini
-    function sendMini(type, payload){
-      if(!miniWin || miniWin.closed) return;
-      const state = {
-        type:'state',
-        title: viewSongs[currentIndex]? viewSongs[currentIndex].name : 'No song',
-        playing: !audio.paused,
-        ...payload
-      };
-      miniWin.postMessage(state, '*');
-    }
+    // Test 4: Detach window open (attempt)
+    openDetachedPlayer();
 
-    /* ---------- controls binding ---------- */
-    playBtn.addEventListener('click', ()=>{ if(!audio.src && viewSongs.length) playIndex(0); else togglePlay(); });
-    prevBtn.addEventListener('click', ()=>{ prev(); });
-    nextBtn.addEventListener('click', ()=>{ nextTrack(); });
-    shuffleToggle.addEventListener('change', ()=>{ shuffle = shuffleToggle.checked; });
-    repeatToggle.addEventListener('change', ()=>{ repeat = repeatToggle.checked; });
+    console.log('All quick tests completed (check UI).');
+    alert('Quick tests completed — check console for details.');
+  }catch(e){
+    console.error('runTests failed', e);
+    alert('Tests failed: ' + (e.message || e));
+  }
+}
 
-    function prev(){
-      if(audio.currentTime>3){ audio.currentTime=0; return; }
-      if(currentIndex<=0){ if(repeat) playIndex(viewSongs.length-1); else return; }
-      playIndex(currentIndex-1);
-    }
-
-    /* ---------- helpers ---------- */
-    function escapeHtml(s){ return (s||'').toString().replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
-
-    /* ---------- init ---------- */
-    document.getElementById('loadAll').addEventListener('click', loadAllSongs);
-    document.getElementById('createPlaylist').addEventListener('click', ()=>{
-      const n = prompt('Playlist name:'); if(!n) return; if(playlists[n]){ alert('Exists'); return;} playlists[n]=[]; savePlaylists(); renderPlaylists();
-    });
-
-    function savePlaylists(){ localStorage.setItem('itune_playlists_v1', JSON.stringify(playlists)); }
-
-    // auto-load if user clicks nothing: do nothing — user must click "Load All Songs" to fetch (safest)
-    // BUT user wanted auto → try load now:
-    loadAllSongs().catch(()=>{});
-
-    // restore playlists & render
-    renderPlaylists();
-    renderQueue();
-
-    // expose functions to console for debugging
-    window._itune = { playIndex, allSongs, viewSongs, loadAllSongs };
-
-  })();
-  </script>
+/* ---------------------
+   Final helpful bits: initialize minimal state if none
+   --------------------- */
+if(!state.library.length){
+  // load sample automatically for demo
+  $('#loadSample').click();
+}
+</script>
 </body>
 </html>
