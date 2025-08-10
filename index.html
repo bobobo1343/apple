@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>iTunes Version</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body {
+  margin:0; font-family: Arial, sans-serif;
+  background: #1c1c1c; color: white;
+}
+header {
+  background: #2a2a2a; padding: 10px; display: flex;
+  justify-content: space-between; align-items: center;
+}
+header h1 { margin:0; font-size: 20px; }
+main {
+  display: flex; height: calc(100vh - 70px);
+}
+.sidebar {
+  width: 250px; background: #111; padding: 10px; overflow-y:auto;
+}
+.sidebar h2 { font-size: 16px; border-bottom: 1px solid #333; padding-bottom: 5px; }
+.sidebar button { width:100%; padding: 6px; margin:4px 0; background:#333; border:none; color:white; cursor:pointer; text-align:left; }
+.sidebar button:hover { background:#444; }
+.library {
+  flex: 1; display: flex; flex-direction: column;
+}
+.library-header {
+  background: #2a2a2a; padding: 10px;
+  display:flex; justify-content: space-between; align-items: center;
+}
+.library-header input {
+  padding:5px; width: 200px;
+}
+.song-list {
+  flex: 1; overflow-y:auto;
+}
+.song-item {
+  display: flex; justify-content: space-between;
+  padding: 6px 10px; border-bottom: 1px solid #333;
+  cursor: pointer;
+}
+.song-item:hover { background:#444; }
+.playback-bar {
+  height: 70px; background: #2a2a2a; display:flex;
+  align-items:center; padding: 0 20px; gap: 20px;
+}
+.playback-info {
+  flex: 1;
+}
+.controls button {
+  background:none; border:none; color:white; font-size: 20px; cursor: pointer;
+}
+.controls button:hover { color: #1db954; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>iTunes Version</h1>
+  <button id="createPlaylistBtn">+ Playlist</button>
+</header>
+
+<main>
+  <div class="sidebar">
+    <h2>Playlists</h2>
+    <div id="playlistList"></div>
+  </div>
+  <div class="library">
+    <div class="library-header">
+      <input type="text" id="searchInput" placeholder="Search...">
+      <button id="addToPlaylistBtn">Add to Playlist</button>
+    </div>
+    <div class="song-list" id="songList"></div>
+  </div>
+</main>
+
+<div class="playback-bar">
+  <div class="controls">
+    <button id="prevBtn">⏮</button>
+    <button id="playPauseBtn">▶</button>
+    <button id="nextBtn">⏭</button>
+  </div>
+  <div class="playback-info" id="playbackInfo">No song playing</div>
+  <audio id="audioPlayer"></audio>
+</div>
+
+<script>
+const songs = [
+  // Add all your song files from the /music folder here:
+  { name: "Song 1", file: "music/song1.mp3" },
+  { name: "Song 2", file: "music/song2.mp3" },
+  { name: "Song 3", file: "music/song3.mp3" }
+];
+
+let currentSongIndex = 0;
+let playlists = JSON.parse(localStorage.getItem("playlists")) || {};
+let selectedSongs = new Set();
+
+const songListEl = document.getElementById("songList");
+const playlistListEl = document.getElementById("playlistList");
+const audioPlayer = document.getElementById("audioPlayer");
+const playbackInfo = document.getElementById("playbackInfo");
+const playPauseBtn = document.getElementById("playPauseBtn");
+
+// Render songs
+function renderSongs(filter="") {
+  songListEl.innerHTML = "";
+  songs.filter(s => s.name.toLowerCase().includes(filter.toLowerCase()))
+       .forEach((song, index) => {
+    const songItem = document.createElement("div");
+    songItem.className = "song-item";
+    songItem.textContent = song.name;
+    songItem.onclick = () => playSong(index);
+    songItem.oncontextmenu = (e) => {
+      e.preventDefault();
+      if (selectedSongs.has(index)) selectedSongs.delete(index);
+      else selectedSongs.add(index);
+      songItem.style.background = selectedSongs.has(index) ? "#555" : "";
+    };
+    songListEl.appendChild(songItem);
+  });
+}
+
+function playSong(index) {
+  currentSongIndex = index;
+  audioPlayer.src = songs[index].file;
+  audioPlayer.play();
+  playbackInfo.textContent = songs[index].name;
+  playPauseBtn.textContent = "⏸";
+}
+
+function togglePlayPause() {
+  if (audioPlayer.paused) {
+    audioPlayer.play();
+    playPauseBtn.textContent = "⏸";
+  } else {
+    audioPlayer.pause();
+    playPauseBtn.textContent = "▶";
+  }
+}
+
+// Playlist logic
+function renderPlaylists() {
+  playlistListEl.innerHTML = "";
+  Object.keys(playlists).forEach(name => {
+    const btn = document.createElement("button");
+    btn.textContent = name;
+    btn.onclick = () => loadPlaylist(name);
+    playlistListEl.appendChild(btn);
+  });
+}
+
+function createPlaylist() {
+  const name = prompt("Enter playlist name:");
+  if (!name) return;
+  playlists[name] = [];
+  savePlaylists();
+  renderPlaylists();
+}
+
+function addToPlaylist() {
+  const name = prompt("Add to which playlist?");
+  if (!name || !playlists[name]) return;
+  selectedSongs.forEach(index => {
+    playlists[name].push(songs[index]);
+  });
+  savePlaylists();
+  selectedSongs.clear();
+}
+
+function loadPlaylist(name) {
+  const playlistSongs = playlists[name];
+  if (!playlistSongs) return;
+  songListEl.innerHTML = "";
+  playlistSongs.forEach((song, index) => {
+    const songItem = document.createElement("div");
+    songItem.className = "song-item";
+    songItem.textContent = song.name;
+    songItem.onclick = () => {
+      audioPlayer.src = song.file;
+      audioPlayer.play();
+      playbackInfo.textContent = song.name;
+    };
+    songListEl.appendChild(songItem);
+  });
+}
+
+function savePlaylists() {
+  localStorage.setItem("playlists", JSON.stringify(playlists));
+}
+
+// Event listeners
+document.getElementById("createPlaylistBtn").onclick = createPlaylist;
+document.getElementById("addToPlaylistBtn").onclick = addToPlaylist;
+document.getElementById("searchInput").oninput = (e) => renderSongs(e.target.value);
+document.getElementById("prevBtn").onclick = () => playSong((currentSongIndex - 1 + songs.length) % songs.length);
+document.getElementById("nextBtn").onclick = () => playSong((currentSongIndex + 1) % songs.length);
+playPauseBtn.onclick = togglePlayPause;
+
+// Init
+renderSongs();
+renderPlaylists();
+</script>
+</body>
+</html>
