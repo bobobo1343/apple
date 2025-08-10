@@ -3,254 +3,148 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>iTunes Clone Music Player</title>
+<title>iTunes Clone Player</title>
 <style>
-  /* Reset & base */
-  * { box-sizing: border-box; }
+  /* iTunes style CSS */
+  @import url('https://fonts.googleapis.com/css2?family=San+Francisco+Display:wght@400;600&display=swap');
   body {
-    margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-      Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
-    background: #f5f5f7;
-    color: #333;
+    margin: 0; background: #f5f5f7; font-family: -apple-system, BlinkMacSystemFont, "San Francisco Display", "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
-  a { color: #007aff; text-decoration: none; }
-  a:hover { text-decoration: underline; }
-
-  /* Container */
   #app {
-    max-width: 1000px;
-    margin: 30px auto;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 12px rgb(0 0 0 / 0.1);
-    display: flex;
-    flex-direction: column;
-    height: 90vh;
-  }
-
-  /* Header (like iTunes bar) */
-  header {
-    background: linear-gradient(to bottom, #d9d9db, #fff);
-    padding: 10px 15px;
-    font-weight: 600;
-    font-size: 18px;
-    border-bottom: 1px solid #ccc;
+    width: 960px; margin: 40px auto; background: white; border-radius: 12px; box-shadow: 0 8px 20px rgb(0 0 0 / 0.1);
+    display: flex; flex-direction: column; height: 700px;
     user-select: none;
   }
-
-  /* Main content area */
-  main {
-    display: flex;
-    flex-grow: 1;
-    overflow: hidden;
+  header {
+    font-weight: 600; font-size: 22px; padding: 16px 24px; border-bottom: 1px solid #ddd; background: linear-gradient(to bottom, #e7e7e7, #fff);
+    color: #222;
   }
-
-  /* Sidebar (Library, Playlists) */
+  main {
+    display: flex; flex-grow: 1; overflow: hidden;
+  }
   nav.sidebar {
-    width: 200px;
-    border-right: 1px solid #ccc;
-    background: #fafafa;
-    padding-top: 15px;
+    width: 240px; background: #f9f9f9; border-right: 1px solid #ddd;
+    display: flex; flex-direction: column;
   }
   nav.sidebar ul {
-    list-style: none;
-    margin: 0; padding: 0;
+    list-style: none; margin: 0; padding: 0;
+    flex-grow: 1;
   }
   nav.sidebar li {
-    padding: 10px 20px;
-    cursor: pointer;
-    font-weight: 600;
-    color: #555;
-    border-left: 4px solid transparent;
-    user-select: none;
-  }
-  nav.sidebar li.active {
-    background: #e6f0ff;
-    border-left: 4px solid #007aff;
-    color: #007aff;
+    padding: 14px 24px; font-weight: 600; font-size: 15px; color: #555; cursor: pointer; border-left: 4px solid transparent;
+    transition: background-color 0.2s, border-left-color 0.2s;
   }
   nav.sidebar li:hover:not(.active) {
-    background: #eee;
+    background: #eaeaea;
   }
-
-  /* Content - Track list and controls */
+  nav.sidebar li.active {
+    background: #d6eaff;
+    border-left-color: #007aff;
+    color: #007aff;
+  }
+  nav.sidebar .footer {
+    padding: 12px 24px; font-size: 13px; color: #888; border-top: 1px solid #ddd; user-select: none;
+  }
   section.content {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
+    flex-grow: 1; display: flex; flex-direction: column;
   }
-
-  /* Top bar: Search and Sort */
   #top-bar {
-    padding: 12px 20px;
-    border-bottom: 1px solid #ddd;
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    background: #fafafa;
+    background: #f7f7f7; padding: 14px 24px; border-bottom: 1px solid #ddd;
+    display: flex; align-items: center; gap: 16px;
   }
   #search-input {
-    flex-grow: 1;
-    font-size: 14px;
-    padding: 6px 10px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
+    flex-grow: 1; font-size: 14px; padding: 6px 12px; border-radius: 8px; border: 1px solid #ccc;
+    outline-offset: 0;
   }
   #sort-select {
-    font-size: 14px;
-    padding: 6px 10px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-    background: white;
+    font-size: 14px; padding: 6px 12px; border-radius: 8px; border: 1px solid #ccc; background: white;
   }
-
-  /* Track table */
   table#tracklist {
-    width: 100%;
-    border-collapse: collapse;
-    flex-grow: 1;
-    overflow-y: auto;
-    display: block;
+    width: 100%; border-collapse: collapse; flex-grow: 1; overflow-y: auto; display: block;
+    font-size: 14px;
   }
   table#tracklist thead {
-    background: #f0f0f0;
-    font-weight: 600;
-    user-select: none;
-    display: table;
-    width: 100%;
-    table-layout: fixed;
+    display: table; width: 100%; table-layout: fixed; background: #f2f2f2; font-weight: 600; color: #666;
   }
   table#tracklist tbody {
-    display: block;
-    height: 100%;
-    overflow-y: auto;
-    width: 100%;
+    display: block; height: 100%; overflow-y: auto; width: 100%;
   }
   table#tracklist tr {
-    cursor: pointer;
-    display: table;
-    width: 100%;
-    table-layout: fixed;
+    display: table; width: 100%; table-layout: fixed; cursor: pointer;
   }
   table#tracklist tr:hover:not(.playing) {
-    background: #f7f7f7;
+    background: #f5faff;
   }
   table#tracklist tr.playing {
     background: #007aff;
     color: white;
   }
   table#tracklist td {
-    padding: 10px 8px;
+    padding: 10px 16px;
     border-bottom: 1px solid #eee;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  table#tracklist td:nth-child(1) { width: 40%; }
-  table#tracklist td:nth-child(2) { width: 25%; }
-  table#tracklist td:nth-child(3) { width: 20%; }
-  table#tracklist td:nth-child(4) { width: 10%; text-align: right; }
-  table#tracklist td:nth-child(5) { width: 15%; }
-
-  /* Player controls */
+  table#tracklist td:nth-child(1) { width: 42%; }
+  table#tracklist td:nth-child(2) { width: 24%; }
+  table#tracklist td:nth-child(3) { width: 22%; }
+  table#tracklist td:nth-child(4) { width: 8%; text-align: right; }
+  table#tracklist td:nth-child(5) { width: 14%; text-align: center; }
   footer.player-controls {
-    border-top: 1px solid #ccc;
-    background: #fafafa;
-    padding: 12px 20px;
-    display: flex;
-    flex-direction: column;
-    user-select: none;
+    border-top: 1px solid #ddd; background: #fafafa; padding: 16px 24px;
+    display: flex; flex-direction: column; user-select: none;
   }
   .player-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    display: flex; justify-content: space-between; align-items: center;
   }
   .now-playing {
-    font-weight: 600;
-    font-size: 16px;
+    font-weight: 600; font-size: 17px; color: #222;
   }
   .now-playing span.artist {
-    font-weight: normal;
-    color: #666;
-    margin-left: 8px;
+    font-weight: 400; color: #555; margin-left: 8px;
   }
-
   .buttons {
-    display: flex;
-    gap: 12px;
+    display: flex; gap: 20px;
   }
   button.control-btn {
-    font-size: 22px;
-    border: none;
-    background: none;
-    cursor: pointer;
-    color: #007aff;
-    padding: 6px;
-    user-select: none;
+    font-size: 24px; border: none; background: none; cursor: pointer;
+    color: #007aff; user-select: none;
+  }
+  button.control-btn:focus {
+    outline: 2px solid #007aff; outline-offset: 2px;
   }
   button.control-btn:hover {
     color: #005bb5;
   }
-
-  /* Progress bar */
   .progress-container {
-    position: relative;
-    height: 8px;
-    background: #ddd;
-    border-radius: 4px;
-    margin-top: 10px;
-    cursor: pointer;
+    margin-top: 12px; position: relative; height: 8px; background: #ddd; border-radius: 6px; cursor: pointer;
   }
   .progress-filled {
-    position: absolute;
-    left: 0;
-    top: 0;
-    height: 8px;
-    background: #007aff;
-    border-radius: 4px;
-    width: 0%;
+    position: absolute; top: 0; left: 0; height: 8px; background: #007aff; border-radius: 6px; width: 0%;
   }
   .time {
-    margin-top: 6px;
-    font-size: 12px;
-    color: #555;
-    display: flex;
-    justify-content: space-between;
+    margin-top: 6px; font-size: 13px; color: #666; display: flex; justify-content: space-between;
   }
-
-  /* Volume slider */
   .volume-container {
-    margin-top: 12px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    margin-top: 12px; display: flex; align-items: center; gap: 12px;
+  }
+  label[for=volume-slider] {
+    font-size: 14px; color: #555;
+    user-select: none;
   }
   input[type=range] {
-    -webkit-appearance: none;
-    width: 100%;
-    height: 6px;
-    border-radius: 3px;
-    background: #ddd;
-    cursor: pointer;
+    -webkit-appearance: none; width: 130px; height: 6px; border-radius: 3px; background: #ccc; cursor: pointer;
   }
   input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 14px;
-    height: 14px;
-    background: #007aff;
-    cursor: pointer;
-    border-radius: 50%;
-    border: none;
-    margin-top: -4px;
+    -webkit-appearance: none; width: 14px; height: 14px; background: #007aff; border-radius: 50%; cursor: pointer;
+    border: none; margin-top: -4px;
   }
   input[type=range]:focus {
     outline: none;
   }
-
-  /* Scrollbar for tracklist */
   table#tracklist tbody::-webkit-scrollbar {
     width: 10px;
   }
@@ -258,15 +152,15 @@
     background: #f0f0f0;
   }
   table#tracklist tbody::-webkit-scrollbar-thumb {
-    background-color: #ccc;
+    background-color: #bbb;
     border-radius: 10px;
-    border: 3px solid #f0f0f0;
+    border: 2px solid #f0f0f0;
   }
 </style>
 </head>
 <body>
 <div id="app" role="application" aria-label="iTunes style music player">
-  <header>iTunes Clone Player</header>
+  <header>iTunes</header>
   <main>
     <nav class="sidebar" role="navigation" aria-label="Library sections">
       <ul>
@@ -275,10 +169,11 @@
         <li data-section="albums" tabindex="0">Albums</li>
         <li data-section="artists" tabindex="0">Artists</li>
       </ul>
+      <div class="footer">© 2025 Your Music</div>
     </nav>
     <section class="content" role="main">
       <div id="top-bar">
-        <input id="search-input" type="search" placeholder="Search songs, artists..." aria-label="Search tracks" />
+        <input id="search-input" type="search" placeholder="Search songs, artists, albums..." aria-label="Search tracks" />
         <select id="sort-select" aria-label="Sort tracks">
           <option value="title">Title</option>
           <option value="artist">Artist</option>
@@ -304,7 +199,7 @@
   <footer class="player-controls" role="region" aria-label="Player controls">
     <div class="player-top">
       <div class="now-playing" aria-live="polite" aria-atomic="true">
-        <span id="np-title">-</span> <span class="artist" id="np-artist"></span>
+        <span id="np-title">-</span><span class="artist" id="np-artist"></span>
       </div>
       <div class="buttons" role="group" aria-label="Playback controls">
         <button class="control-btn" id="btn-prev" aria-label="Previous track">⏮️</button>
@@ -330,40 +225,16 @@
 
 <script>
 (() => {
-  // Hardcoded list of local music files in /music/ folder
-  const tracks = [
-    {
-      title: "Sample Song 1",
-      artist: "Artist A",
-      album: "Album 1",
-      genre: "Pop",
-      duration: 215,
-      url: "music/song1.mp3"
-    },
-    {
-      title: "Sample Song 2",
-      artist: "Artist B",
-      album: "Album 2",
-      genre: "Rock",
-      duration: 189,
-      url: "music/song2.mp3"
-    },
-    {
-      title: "Sample Song 3",
-      artist: "Artist C",
-      album: "Album 3",
-      genre: "Jazz",
-      duration: 243,
-      url: "music/song3.mp3"
-    }
-  ];
+  const API_KEY = 'AIzaSyDsYE91wH7UDwu8eZNbD1CFuVcilgYeZhI';
+  const FOLDER_ID = '1DGz9zEQh29EAqTZpmWK5mwSj5HComnkn';
 
-  let filteredTracks = [...tracks];
+  let tracks = [];
+  let filteredTracks = [];
   let currentTrackIndex = -1;
   let isPlaying = false;
   let shuffle = false;
   let repeat = false;
-  let currentSort = "title";
+  let currentSort = 'title';
 
   // DOM elements
   const tracklistBody = document.querySelector("#tracklist tbody");
@@ -383,10 +254,10 @@
   const sortSelect = document.getElementById("sort-select");
   const libraryList = document.querySelector("nav.sidebar ul");
 
-  // Audio element
   const audio = new Audio();
+  audio.preload = 'auto';
 
-  // Helpers
+  // Utils
   function formatTime(seconds) {
     if (isNaN(seconds)) return "0:00";
     const m = Math.floor(seconds / 60);
@@ -394,7 +265,32 @@
     return m + ":" + (s < 10 ? "0" : "") + s;
   }
 
-  // Render tracks list
+  // Fetch tracks from Google Drive folder
+  async function fetchTracks() {
+    const url = `https://www.googleapis.com/drive/v3/files?q='${FOLDER_ID}'+in+parents+and+mimeType='audio/mpeg'&fields=files(id,name,createdTime,md5Checksum,mimeType)&key=${API_KEY}`;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Failed to fetch files");
+      const data = await res.json();
+      tracks = data.files.map(f => ({
+        id: f.id,
+        title: f.name.replace(/\.[^/.]+$/, ""),
+        artist: 'Unknown Artist',
+        album: 'Unknown Album',
+        genre: 'Unknown',
+        duration: 0,
+        url: `https://www.googleapis.com/drive/v3/files/${f.id}?alt=media&key=${API_KEY}`
+      }));
+      filteredTracks = [...tracks];
+      sortTracks(currentSort);
+      renderTrackList();
+    } catch (e) {
+      alert("Failed to load tracks: " + e.message);
+      console.error(e);
+    }
+  }
+
+  // Render track list
   function renderTrackList() {
     tracklistBody.innerHTML = "";
     filteredTracks.forEach((track, i) => {
@@ -420,12 +316,11 @@
     });
   }
 
-  // Play track by index
+  // Play track
   async function playTrack(index) {
     if (index < 0 || index >= filteredTracks.length) return;
     const track = filteredTracks[index];
     currentTrackIndex = index;
-
     audio.src = track.url;
     try {
       await audio.play();
@@ -434,8 +329,9 @@
       updatePlayingRow();
       npTitle.textContent = track.title;
       npArtist.textContent = track.artist;
-    } catch (e) {
+    } catch(e) {
       console.warn("Playback error:", e);
+      alert("Playback failed — likely due to Google Drive CORS restrictions.");
     }
   }
 
@@ -492,13 +388,11 @@
     }
   }
 
-  // Shuffle toggle
   btnShuffle.addEventListener("click", () => {
     shuffle = !shuffle;
     btnShuffle.style.color = shuffle ? "#007aff" : "#555";
   });
 
-  // Repeat toggle
   btnRepeat.addEventListener("click", () => {
     repeat = !repeat;
     btnRepeat.style.color = repeat ? "#007aff" : "#555";
@@ -513,80 +407,78 @@
   });
 
   audio.addEventListener("timeupdate", () => {
-    if(audio.duration) {
-      const percent = (audio.currentTime / audio.duration) * 100;
-      progressFilled.style.width = percent + "%";
-      progressBar.setAttribute("aria-valuenow", Math.floor(percent));
-      timeCurrent.textContent = formatTime(audio.currentTime);
-      timeDuration.textContent = formatTime(audio.duration);
-    }
+    const percent = (audio.currentTime / audio.duration) * 100 || 0;
+    progressFilled.style.width = percent + "%";
+    timeCurrent.textContent = formatTime(audio.currentTime);
+    timeDuration.textContent = formatTime(audio.duration);
+    progressBar.setAttribute("aria-valuenow", Math.floor(percent));
   });
 
   progressBar.addEventListener("click", e => {
     const rect = progressBar.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
-    const pct = clickX / rect.width;
+    const percent = clickX / rect.width;
     if (audio.duration) {
-      audio.currentTime = pct * audio.duration;
+      audio.currentTime = percent * audio.duration;
     }
   });
 
-  volumeSlider.addEventListener("input", e => {
-    audio.volume = e.target.value;
-    volumeSlider.setAttribute("aria-valuenow", e.target.value);
+  volumeSlider.addEventListener("input", () => {
+    audio.volume = volumeSlider.value;
   });
 
   btnPlayPause.addEventListener("click", togglePlayPause);
   btnNext.addEventListener("click", playNext);
   btnPrev.addEventListener("click", playPrev);
 
-  // Search functionality
-  searchInput.addEventListener("input", e => {
-    const query = e.target.value.toLowerCase();
+  // Search & sort
+  searchInput.addEventListener("input", () => {
+    const val = searchInput.value.trim().toLowerCase();
     filteredTracks = tracks.filter(t =>
-      t.title.toLowerCase().includes(query) ||
-      t.artist.toLowerCase().includes(query) ||
-      t.album.toLowerCase().includes(query) ||
-      t.genre.toLowerCase().includes(query)
+      t.title.toLowerCase().includes(val) ||
+      t.artist.toLowerCase().includes(val) ||
+      t.album.toLowerCase().includes(val) ||
+      t.genre.toLowerCase().includes(val)
     );
     sortTracks(currentSort);
     renderTrackList();
   });
 
-  // Sorting functionality
-  function sortTracks(key) {
-    currentSort = key;
-    filteredTracks.sort((a,b) => {
-      if(key === "duration") return a.duration - b.duration;
-      return a[key].localeCompare(b[key]);
-    });
-  }
-  sortSelect.addEventListener("change", e => {
-    sortTracks(e.target.value);
+  sortSelect.addEventListener("change", () => {
+    currentSort = sortSelect.value;
+    sortTracks(currentSort);
     renderTrackList();
   });
 
-  // Sidebar navigation (library/playlists/etc - currently just library)
+  function sortTracks(key) {
+    filteredTracks.sort((a,b) => {
+      let va = a[key] || "", vb = b[key] || "";
+      if(key === "duration") return va - vb;
+      va = va.toString().toLowerCase();
+      vb = vb.toString().toLowerCase();
+      if(va < vb) return -1;
+      if(va > vb) return 1;
+      return 0;
+    });
+  }
+
+  // Sidebar nav - highlight only Library for now
   libraryList.querySelectorAll("li").forEach(li => {
-    li.addEventListener("click", e => {
-      libraryList.querySelectorAll("li").forEach(el => el.classList.remove("active"));
-      e.target.classList.add("active");
-      // For now, we only implement Library view.
-      // Playlists, Albums, Artists can be added similarly.
-      // We'll just reset filteredTracks on library.
-      if (e.target.dataset.section === "library") {
-        filteredTracks = [...tracks];
-        sortTracks(currentSort);
-        renderTrackList();
-      }
+    li.addEventListener("click", () => {
+      libraryList.querySelector("li.active").classList.remove("active");
+      li.classList.add("active");
+      alert(`Section '${li.dataset.section}' clicked. Feature not implemented.`);
     });
   });
 
-  // Initialize
-  sortTracks(currentSort);
-  renderTrackList();
+  // Init volume
   audio.volume = volumeSlider.value;
+
+  // Start fetching tracks on load
+  fetchTracks();
+
 })();
 </script>
+
 </body>
 </html>
