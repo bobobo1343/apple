@@ -1,207 +1,553 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>iTunes Version</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ITUNE VERSION</title>
 <style>
-body {
-  margin:0; font-family: Arial, sans-serif;
-  background: #1c1c1c; color: white;
-}
-header {
-  background: #2a2a2a; padding: 10px; display: flex;
-  justify-content: space-between; align-items: center;
-}
-header h1 { margin:0; font-size: 20px; }
-main {
-  display: flex; height: calc(100vh - 70px);
-}
-.sidebar {
-  width: 250px; background: #111; padding: 10px; overflow-y:auto;
-}
-.sidebar h2 { font-size: 16px; border-bottom: 1px solid #333; padding-bottom: 5px; }
-.sidebar button { width:100%; padding: 6px; margin:4px 0; background:#333; border:none; color:white; cursor:pointer; text-align:left; }
-.sidebar button:hover { background:#444; }
-.library {
-  flex: 1; display: flex; flex-direction: column;
-}
-.library-header {
-  background: #2a2a2a; padding: 10px;
-  display:flex; justify-content: space-between; align-items: center;
-}
-.library-header input {
-  padding:5px; width: 200px;
-}
-.song-list {
-  flex: 1; overflow-y:auto;
-}
-.song-item {
-  display: flex; justify-content: space-between;
-  padding: 6px 10px; border-bottom: 1px solid #333;
-  cursor: pointer;
-}
-.song-item:hover { background:#444; }
-.playback-bar {
-  height: 70px; background: #2a2a2a; display:flex;
-  align-items:center; padding: 0 20px; gap: 20px;
-}
-.playback-info {
-  flex: 1;
-}
-.controls button {
-  background:none; border:none; color:white; font-size: 20px; cursor: pointer;
-}
-.controls button:hover { color: #1db954; }
+  /* ---------- Simple iTunes-like layout (no artwork) ---------- */
+  :root{
+    --bg:#f5f5f8; --panel:#ffffff; --muted:#7a7a84; --accent:#0a5ad9; --text:#111;
+  }
+  [data-theme="dark"]{
+    --bg:#121214; --panel:#161618; --muted:#9a9aa2; --accent:#6ea7ff; --text:#eee;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+  .app{display:flex;flex-direction:column;height:100vh}
+  .topbar{display:flex;align-items:center;gap:12px;padding:12px 18px;background:var(--panel);border-bottom:1px solid rgba(0,0,0,0.06)}
+  .topbar h1{margin:0;font-size:18px}
+  .topbar .controls{margin-left:auto;display:flex;gap:10px;align-items:center}
+  .container{flex:1;display:flex;overflow:hidden}
+  .left{width:260px;background:var(--panel);border-right:1px solid rgba(0,0,0,0.06);display:flex;flex-direction:column;padding:12px;gap:12px;overflow:auto}
+  .left h2{margin:0;font-size:14px;color:var(--muted)}
+  .playlist-list{display:flex;flex-direction:column;gap:8px;overflow:auto}
+  .playlist-btn{background:transparent;border:none;padding:8px 10px;text-align:left;border-radius:8px;cursor:pointer;color:var(--text);font-weight:600}
+  .playlist-btn:hover,.playlist-btn.active{background:rgba(0,0,0,0.06)}
+  .center{flex:1;display:flex;flex-direction:column;overflow:hidden}
+  .search-row{padding:12px;background:var(--panel);display:flex;gap:10px;align-items:center;border-bottom:1px solid rgba(0,0,0,0.04)}
+  .search-row input[type="search"]{flex:1;padding:8px 12px;border-radius:999px;border:1px solid rgba(0,0,0,0.08);outline:none}
+  .song-table{flex:1;overflow:auto;background:var(--panel);padding:8px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  thead th{font-size:12px;text-align:left;padding:10px 8px;color:var(--muted);position:sticky;top:0;background:var(--panel);z-index:2}
+  tbody tr{cursor:pointer;border-bottom:1px solid rgba(0,0,0,0.04)}
+  tbody tr:hover{background:rgba(0,0,0,0.03)}
+  td,th{padding:10px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  td.name{width:50%}
+  td.artist{width:30%}
+  td.duration{text-align:right;width:20%}
+
+  .right{width:320px;background:var(--panel);border-left:1px solid rgba(0,0,0,0.04);display:flex;flex-direction:column;padding:12px;gap:10px;overflow:auto}
+  .queue-title{font-weight:700;color:var(--muted);margin-bottom:6px}
+  .queue-list{display:flex;flex-direction:column;gap:6px;overflow:auto}
+  .queue-item{padding:8px;border-radius:8px;display:flex;justify-content:space-between;align-items:center}
+  .queue-item:hover{background:rgba(0,0,0,0.03)}
+
+  /* bottom bar */
+  .nowbar{height:96px;background:var(--panel);border-top:1px solid rgba(0,0,0,0.06);display:flex;align-items:center;padding:12px 18px;gap:12px}
+  .nowbar .info{flex:1;min-width:200px}
+  .nowbar .title{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .nowbar .sub{font-size:13px;color:var(--muted)}
+  .play-controls{display:flex;align-items:center;gap:12px}
+  .icon-btn{background:transparent;border:0;font-size:20px;padding:8px;border-radius:8px;cursor:pointer}
+  .icon-btn:hover{background:rgba(0,0,0,0.04)}
+  .progress{flex:1;margin:0 8px;height:6px;background:rgba(0,0,0,0.06);border-radius:6px;cursor:pointer;position:relative}
+  .progress .fill{height:100%;background:var(--accent);width:0;border-radius:6px}
+  .time{font-size:12px;color:var(--muted);min-width:48px;text-align:right}
+
+  /* small utilities */
+  .btn{padding:8px 10px;border-radius:8px;border:0;background:var(--accent);color:#fff;font-weight:700;cursor:pointer}
+  .ghost{background:transparent;border:1px solid rgba(0,0,0,0.08);color:var(--text)}
+  .small{padding:6px 8px;border-radius:6px;font-size:13px}
+  .hidden{display:none}
+  .danger{color:#c0392b}
+
+  /* responsive */
+  @media(max-width:980px){.right{display:none}.left{width:200px}}
 </style>
 </head>
-<body>
-
-<header>
-  <h1>iTunes Version</h1>
-  <button id="createPlaylistBtn">+ Playlist</button>
-</header>
-
-<main>
-  <div class="sidebar">
-    <h2>Playlists</h2>
-    <div id="playlistList"></div>
-  </div>
-  <div class="library">
-    <div class="library-header">
-      <input type="text" id="searchInput" placeholder="Search...">
-      <button id="addToPlaylistBtn">Add to Playlist</button>
+<body data-theme="light">
+  <div class="app">
+    <div class="topbar">
+      <h1>ITUNE VERSION</h1>
+      <div class="controls">
+        <button id="themeToggle" class="small ghost">Dark</button>
+        <button id="openMini" class="small">Mini Player</button>
+        <button id="featuresBtn" class="small">Features ▾</button>
+      </div>
     </div>
-    <div class="song-list" id="songList"></div>
+
+    <div class="container">
+      <div class="left">
+        <h2>Playlists</h2>
+        <div style="display:flex;gap:8px">
+          <input id="newPlaylistName" placeholder="New playlist" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.06)"/>
+          <button id="createPlaylist" class="small">➕</button>
+        </div>
+        <div class="playlist-list" id="playlistList"></div>
+        <hr/>
+        <div>
+          <button id="loadAll" class="small ghost" style="width:100%">Load All Songs</button>
+          <div id="status" style="margin-top:8px;color:var(--muted);font-size:13px">Status: idle</div>
+          <div id="corsNotice" style="margin-top:10px;color:#a33;display:none">CORS prevented audio streaming — see instructions below.</div>
+        </div>
+      </div>
+
+      <div class="center">
+        <div class="search-row">
+          <input id="search" type="search" placeholder="Search song or artist..." />
+          <label style="display:flex;gap:8px;align-items:center"><input id="shuffleToggle" type="checkbox"/><span style="font-size:13px;color:var(--muted)">Shuffle</span></label>
+          <label style="display:flex;gap:8px;align-items:center"><input id="repeatToggle" type="checkbox"/><span style="font-size:13px;color:var(--muted)">Repeat</span></label>
+        </div>
+
+        <div class="song-table" id="songTableWrap">
+          <table id="songTable" aria-describedby="song list">
+            <thead>
+              <tr><th class="name">Name</th><th class="artist">Artist</th><th class="duration">Duration</th></tr>
+            </thead>
+            <tbody id="songList" draggable="true"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="right">
+        <div class="queue-title">Up Next / History</div>
+        <div class="queue-list" id="queueList"></div>
+        <hr/>
+        <div>
+          <div style="font-weight:700;color:var(--muted)">Troubleshooting</div>
+          <div style="font-size:13px;color:var(--muted);margin-top:6px">If a song fails to play it is likely a Drive CORS restriction. Solutions: 1) Host files in GitHub / Cloud storage that supports CORS, 2) Use a small proxy to add CORS headers, or 3) use the popup mini-player (will sometimes bypass autoplay restrictions after user interaction).</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nowbar">
+      <div class="info">
+        <div class="title" id="nowTitle">No song playing</div>
+        <div class="sub" id="nowSub">—</div>
+      </div>
+
+      <div class="play-controls">
+        <button id="prev" class="icon-btn" title="Previous">⏮</button>
+        <button id="play" class="icon-btn" title="Play / Pause">▶</button>
+        <button id="next" class="icon-btn" title="Next">⏭</button>
+      </div>
+
+      <div class="progress" id="progress">
+        <div class="fill" id="progressFill"></div>
+      </div>
+
+      <div class="time" id="time">0:00 / 0:00</div>
+    </div>
   </div>
-</main>
 
-<div class="playback-bar">
-  <div class="controls">
-    <button id="prevBtn">⏮</button>
-    <button id="playPauseBtn">▶</button>
-    <button id="nextBtn">⏭</button>
-  </div>
-  <div class="playback-info" id="playbackInfo">No song playing</div>
-  <audio id="audioPlayer"></audio>
-</div>
+  <!-- Hidden audio element -->
+  <audio id="audio" crossorigin="anonymous"></audio>
 
-<script>
-const songs = [
-  // Add all your song files from the /music folder here:
-  { name: "Song 1", file: "music/song1.mp3" },
-  { name: "Song 2", file: "music/song2.mp3" },
-  { name: "Song 3", file: "music/song3.mp3" }
-];
+  <!-- ====== SCRIPT ====== -->
+  <script>
+  (function(){
+    /* ------------------ CONFIG (your keys) ------------------ */
+    const API_KEY = 'AIzaSyDsYE91wH7UDwu8eZNbD1CFuVcilgYeZhI';
+    const FOLDER_ID = '1DGz9zEQh29EAqTZpmWK5mwSj5HComnkn';
+    /* ------------------ state ------------------ */
+    let allSongs = [];           // {id,name,mimeType,duration?,artist?}
+    let viewSongs = [];          // filtered list
+    let queue = [];              // queue of indices into viewSongs (play history/up next)
+    let currentIndex = -1;       // index into viewSongs for current playing
+    let isPlaying = false;
+    let shuffle = false;
+    let repeat = false;
+    let playlists = JSON.parse(localStorage.getItem('itune_playlists_v1') || '{}');
+    let miniWin = null;
 
-let currentSongIndex = 0;
-let playlists = JSON.parse(localStorage.getItem("playlists")) || {};
-let selectedSongs = new Set();
+    /* DOM */
+    const statusEl = document.getElementById('status');
+    const corsNotice = document.getElementById('corsNotice');
+    const songListEl = document.getElementById('songList');
+    const queueListEl = document.getElementById('queueList');
+    const playBtn = document.getElementById('play');
+    const prevBtn = document.getElementById('prev');
+    const nextBtn = document.getElementById('next');
+    const audio = document.getElementById('audio');
+    const nowTitle = document.getElementById('nowTitle');
+    const nowSub = document.getElementById('nowSub');
+    const progress = document.getElementById('progress');
+    const progressFill = document.getElementById('progressFill');
+    const timeEl = document.getElementById('time');
+    const searchInput = document.getElementById('search');
+    const createPlaylistBtn = document.getElementById('createPlaylist');
+    const newPlaylistName = document.getElementById('newPlaylistName');
+    const playlistList = document.getElementById('playlistList');
+    const loadAllBtn = document.getElementById('loadAll');
+    const themeToggle = document.getElementById('themeToggle');
+    const openMiniBtn = document.getElementById('openMini');
+    const shuffleToggle = document.getElementById('shuffleToggle');
+    const repeatToggle = document.getElementById('repeatToggle');
 
-const songListEl = document.getElementById("songList");
-const playlistListEl = document.getElementById("playlistList");
-const audioPlayer = document.getElementById("audioPlayer");
-const playbackInfo = document.getElementById("playbackInfo");
-const playPauseBtn = document.getElementById("playPauseBtn");
+    /* ---------- utilities ---------- */
+    function logStatus(s){ statusEl.textContent = 'Status: ' + s; }
+    function fmtTime(s){ if(!s || isNaN(s)) return '0:00'; const m=Math.floor(s/60); const sec=Math.floor(s%60).toString().padStart(2,'0'); return `${m}:${sec}`; }
 
-// Render songs
-function renderSongs(filter="") {
-  songListEl.innerHTML = "";
-  songs.filter(s => s.name.toLowerCase().includes(filter.toLowerCase()))
-       .forEach((song, index) => {
-    const songItem = document.createElement("div");
-    songItem.className = "song-item";
-    songItem.textContent = song.name;
-    songItem.onclick = () => playSong(index);
-    songItem.oncontextmenu = (e) => {
-      e.preventDefault();
-      if (selectedSongs.has(index)) selectedSongs.delete(index);
-      else selectedSongs.add(index);
-      songItem.style.background = selectedSongs.has(index) ? "#555" : "";
-    };
-    songListEl.appendChild(songItem);
-  });
-}
+    /* ---------- Drive helpers ---------- */
+    async function listAudioFilesFromDrive(pageToken=''){
+      const q = encodeURIComponent(`'${FOLDER_ID}' in parents and mimeType contains 'audio' and trashed = false`);
+      const fields = 'nextPageToken,files(id,name,mimeType,webContentLink,createdTime)'; // webContentLink sometimes present
+      const url = `https://www.googleapis.com/drive/v3/files?key=${API_KEY}&q=${q}&fields=${fields}&pageSize=100${pageToken?('&pageToken='+pageToken):''}`;
+      const res = await fetch(url);
+      if(!res.ok) {
+        const txt = await res.text().catch(()=>res.statusText);
+        throw new Error('Drive API error: ' + res.status + ' ' + txt);
+      }
+      return res.json();
+    }
 
-function playSong(index) {
-  currentSongIndex = index;
-  audioPlayer.src = songs[index].file;
-  audioPlayer.play();
-  playbackInfo.textContent = songs[index].name;
-  playPauseBtn.textContent = "⏸";
-}
+    function driveFileToUrl(id){
+      // best-effort direct streaming URL (may be blocked by CORS depending on Drive)
+      return `https://www.googleapis.com/drive/v3/files/${id}?alt=media&key=${API_KEY}`;
+      // Alternate: http(s)://drive.google.com/uc?export=download&id=${id}  (sometimes behaves differently)
+    }
 
-function togglePlayPause() {
-  if (audioPlayer.paused) {
-    audioPlayer.play();
-    playPauseBtn.textContent = "⏸";
-  } else {
-    audioPlayer.pause();
-    playPauseBtn.textContent = "▶";
-  }
-}
+    /* ---------- load all songs ---------- */
+    async function loadAllSongs(){
+      logStatus('Listing files from Drive...');
+      corsNotice.style.display = 'none';
+      allSongs = [];
+      try{
+        let token = '';
+        do{
+          const data = await listAudioFilesFromDrive(token);
+          if(Array.isArray(data.files)) allSongs.push(...data.files);
+          token = data.nextPageToken || '';
+        } while(token);
+        // sort by name
+        allSongs.sort((a,b)=>a.name.localeCompare(b.name, undefined, {sensitivity:'base'}));
+        // normalize
+        allSongs = allSongs.map(f => ({id:f.id, name:f.name, mimeType:f.mimeType}));
+        viewSongs = [...allSongs];
+        renderSongList();
+        logStatus(`Loaded ${allSongs.length} tracks`);
+        // attempt to fetch duration metadata for a few songs (best-effort)
+        attemptMetadataLoadForList(viewSongs.slice(0,30));
+      }catch(err){
+        logStatus('Error listing files: ' + (err.message||err));
+        alert('Failed to list Drive files: ' + (err.message||err));
+      }
+    }
 
-// Playlist logic
-function renderPlaylists() {
-  playlistListEl.innerHTML = "";
-  Object.keys(playlists).forEach(name => {
-    const btn = document.createElement("button");
-    btn.textContent = name;
-    btn.onclick = () => loadPlaylist(name);
-    playlistListEl.appendChild(btn);
-  });
-}
+    /* Try to load audio metadata to get duration. This will fail if CORS blocks the file. */
+    async function attemptMetadataLoadForList(list){
+      for(const item of list){
+        try{
+          const url = driveFileToUrl(item.id);
+          const a = new Audio();
+          a.crossOrigin = "anonymous";
+          a.src = url;
+          await new Promise((resolve, reject)=>{
+            const t = setTimeout(()=>{ a.src=''; resolve(); }, 5000); // don't hang too long
+            a.addEventListener('loadedmetadata', ()=>{
+              clearTimeout(t);
+              item.duration = a.duration;
+              resolve();
+            });
+            a.addEventListener('error', (e)=>{
+              clearTimeout(t);
+              // likely CORS or other error — mark so UI can show
+              item._metaError = true;
+              resolve();
+            });
+          });
+        }catch(e){
+          item._metaError = true;
+        }
+      }
+      renderSongList(); // update durations where available
+    }
 
-function createPlaylist() {
-  const name = prompt("Enter playlist name:");
-  if (!name) return;
-  playlists[name] = [];
-  savePlaylists();
-  renderPlaylists();
-}
+    /* ---------- render UI ---------- */
+    function renderSongList(){
+      songListEl.innerHTML = '';
+      viewSongs.forEach((s, idx)=>{
+        const tr = document.createElement('tr');
+        tr.draggable = true;
+        tr.dataset.index = idx;
+        tr.innerHTML = `<td class="name">${escapeHtml(s.name)}</td><td class="artist">${escapeHtml(s.artist||'Unknown')}</td><td class="duration">${s.duration?fmtTime(s.duration): (s._metaError? '—' : '…')}</td>`;
+        tr.onclick = ()=>playIndex(idx);
+        // drag handlers for adding to playlist
+        tr.addEventListener('dragstart', e=>{
+          e.dataTransfer.setData('text/songIndex', idx);
+        });
+        songListEl.appendChild(tr);
+      });
+    }
 
-function addToPlaylist() {
-  const name = prompt("Add to which playlist?");
-  if (!name || !playlists[name]) return;
-  selectedSongs.forEach(index => {
-    playlists[name].push(songs[index]);
-  });
-  savePlaylists();
-  selectedSongs.clear();
-}
+    function renderPlaylists(){
+      playlistList.innerHTML = '';
+      const keys = Object.keys(playlists);
+      if(keys.length===0){
+        playlistList.innerHTML = '<div style="color:var(--muted);font-size:13px">No playlists yet</div>';
+        return;
+      }
+      keys.forEach(name=>{
+        const btn = document.createElement('button');
+        btn.className = 'playlist-btn';
+        btn.textContent = name;
+        btn.onclick = ()=>loadPlaylist(name);
+        // enable drop to playlist
+        btn.addEventListener('dragover', e=>{ e.preventDefault(); btn.style.background='rgba(0,0,0,0.06)'; });
+        btn.addEventListener('dragleave', e=>{ btn.style.background=''; });
+        btn.addEventListener('drop', e=>{
+          e.preventDefault(); btn.style.background='';
+          const idx = e.dataTransfer.getData('text/songIndex');
+          if(idx==null) return;
+          const song = viewSongs[Number(idx)];
+          if(!song) return;
+          addSongToPlaylist(name, song);
+        });
+        playlistList.appendChild(btn);
 
-function loadPlaylist(name) {
-  const playlistSongs = playlists[name];
-  if (!playlistSongs) return;
-  songListEl.innerHTML = "";
-  playlistSongs.forEach((song, index) => {
-    const songItem = document.createElement("div");
-    songItem.className = "song-item";
-    songItem.textContent = song.name;
-    songItem.onclick = () => {
-      audioPlayer.src = song.file;
-      audioPlayer.play();
-      playbackInfo.textContent = song.name;
-    };
-    songListEl.appendChild(songItem);
-  });
-}
+        // small remove button (delete playlist)
+        const rem = document.createElement('button');
+        rem.textContent = '🗑';
+        rem.style.marginLeft='6px';
+        rem.className='small ghost';
+        rem.onclick = (ev)=>{ ev.stopPropagation(); if(confirm('Delete playlist "'+name+'"?')){ delete playlists[name]; savePlaylists(); renderPlaylists(); } };
+        btn.appendChild(rem);
+      });
+    }
 
-function savePlaylists() {
-  localStorage.setItem("playlists", JSON.stringify(playlists));
-}
+    function renderQueue(){
+      queueListEl.innerHTML = '';
+      if(queue.length===0){ queueListEl.innerHTML = '<div style="color:var(--muted);font-size:13px">Queue empty</div>'; return; }
+      queue.forEach((qidx, i)=>{
+        const s = viewSongs[qidx];
+        const div = document.createElement('div');
+        div.className='queue-item';
+        div.innerHTML = `<span style="flex:1">${escapeHtml(s.name)}</span><div style="display:flex;gap:6px"><button class="small ghost" data-i="${i}">▶</button><button class="small danger" data-rem="${i}">✖</button></div>`;
+        div.querySelector('[data-i]').onclick = ()=>{ playIndex(qidx); };
+        div.querySelector('[data-rem]').onclick = (e)=>{ e.stopPropagation(); queue.splice(i,1); renderQueue(); };
+        queueListEl.appendChild(div);
+      });
+    }
 
-// Event listeners
-document.getElementById("createPlaylistBtn").onclick = createPlaylist;
-document.getElementById("addToPlaylistBtn").onclick = addToPlaylist;
-document.getElementById("searchInput").oninput = (e) => renderSongs(e.target.value);
-document.getElementById("prevBtn").onclick = () => playSong((currentSongIndex - 1 + songs.length) % songs.length);
-document.getElementById("nextBtn").onclick = () => playSong((currentSongIndex + 1) % songs.length);
-playPauseBtn.onclick = togglePlayPause;
+    /* ---------- playback ---------- */
+    function playIndex(idx){
+      if(idx<0 || idx>=viewSongs.length) return;
+      currentIndex = idx;
+      const song = viewSongs[idx];
+      const url = driveFileToUrl(song.id);
+      // Attempt to set audio.src and play — may get blocked by CORS
+      try{
+        audio.pause();
+        audio.src = url;
+        audio.crossOrigin = "anonymous";
+        // push to queue/history
+        queue.unshift(idx);
+        if(queue.length>200) queue.pop();
+        renderQueue();
+        // play on user interaction — if autoplay blocked, user must click play
+        audio.play().then(()=>{
+          isPlaying = true;
+          updateNowBar();
+        }).catch(err=>{
+          // autoplay or CORS errors
+          console.warn('Play promise rejected', err);
+          isPlaying = false;
+          updateNowBar();
+          // Detect CORS by attempting a fetch HEAD
+          checkUrlCORS(url).then(corsOk=>{
+            if(!corsOk){
+              corsNotice.style.display = 'block';
+              corsNotice.textContent = 'CORS prevented streaming this file. See troubleshooting in the right panel.';
+            } else {
+              // maybe autoplay blocked - tell user to click play
+              alert('Playback blocked by browser autoplay policy — please click the play button to start audio.');
+            }
+          });
+        });
+      }catch(e){
+        console.error('playIndex error', e);
+      }
+      updateNowBar();
+    }
 
-// Init
-renderSongs();
-renderPlaylists();
-</script>
+    function togglePlay(){
+      if(!audio.src){ if(viewSongs.length) return playIndex(0); else return; }
+      if(audio.paused) audio.play().catch(err=>{ alert('Play failed: ' + err.message); });
+      else audio.pause();
+    }
+
+    function nextTrack(){
+      if(shuffle){
+        const rnd = Math.floor(Math.random()*viewSongs.length);
+        playIndex(rnd);
+        return;
+      }
+      if(currentIndex < 0) return;
+      let next = currentIndex + 1;
+      if(next >= viewSongs.length){
+        if(repeat) next = 0;
+        else { audio.pause(); isPlaying=false; updateNowBar(); return; }
+      }
+      playIndex(next);
+    }
+
+    audio.addEventListener('play', ()=>{ isPlaying=true; updateNowBar(); sendMini('play'); });
+    audio.addEventListener('pause', ()=>{ isPlaying=false; updateNowBar(); sendMini('pause'); });
+    audio.addEventListener('timeupdate', ()=>{
+      const d = audio.duration || 0;
+      const t = audio.currentTime || 0;
+      const pct = d ? (t/d*100) : 0;
+      progressFill.style.width = pct+'%';
+      timeEl.textContent = `${fmtTime(t)} / ${fmtTime(d)}`;
+      sendMini('time', {current:t, duration:d});
+    });
+    audio.addEventListener('ended', () => {
+      if(repeat) { audio.currentTime=0; audio.play(); return; }
+      nextTrack();
+    });
+    progress.addEventListener('click', e=>{
+      const rect = progress.getBoundingClientRect();
+      const pct = (e.clientX - rect.left)/rect.width;
+      if(audio.duration) audio.currentTime = pct * audio.duration;
+    });
+
+    /* ---------- playlists ---------- */
+    function savePlaylists(){ localStorage.setItem('itune_playlists_v1', JSON.stringify(playlists)); }
+    createPlaylistBtn.addEventListener('click', ()=>{
+      const name = newPlaylistName.value.trim();
+      if(!name){ alert('Enter playlist name'); return; }
+      if(playlists[name]){ alert('Playlist exists'); return; }
+      playlists[name] = []; savePlaylists(); renderPlaylists(); newPlaylistName.value=''; }
+    function addSongToPlaylist(playlistName, song){
+      if(!playlists[playlistName]) playlists[playlistName]=[];
+      if(playlists[playlistName].includes(song.id)){ alert('Song already in playlist'); return; }
+      playlists[playlistName].push(song.id);
+      savePlaylists();
+      alert(`Added "${song.name}" to "${playlistName}"`);
+    }
+    function loadPlaylist(name){
+      const ids = playlists[name]||[];
+      viewSongs = ids.map(id => allSongs.find(s=>s.id===id)).filter(Boolean);
+      renderSongList();
+    }
+
+    /* ---------- utility: check CORS by fetching a byte-range or HEAD ---------- */
+    async function checkUrlCORS(url){
+      try{
+        const res = await fetch(url, {method:'GET', mode:'cors', headers: {Range: 'bytes=0-1'}}); // byte-range small fetch
+        // If we get a response and it's ok or partial, CORS likely allowed
+        return (res.ok || res.status===206);
+      }catch(e){
+        return false;
+      }
+    }
+
+    /* ---------- search ---------- */
+    searchInput.addEventListener('input', ()=>{
+      const q = searchInput.value.trim().toLowerCase();
+      viewSongs = allSongs.filter(s => s.name.toLowerCase().includes(q) || (s.artist||'').toLowerCase().includes(q));
+      renderSongList();
+    });
+
+    /* ---------- queue UI ---------- */
+    function pushToQueue(idx){
+      queue.unshift(idx);
+      if(queue.length>200) queue.pop();
+      renderQueue();
+    }
+
+    /* ---------- theme ---------- */
+    themeToggle.addEventListener('click', ()=>{
+      const body = document.body;
+      if(body.getAttribute('data-theme')==='dark'){ body.setAttribute('data-theme','light'); themeToggle.textContent='Dark'; localStorage.removeItem('itune_theme'); }
+      else { body.setAttribute('data-theme','dark'); themeToggle.textContent='Light'; localStorage.setItem('itune_theme','dark'); }
+    });
+    // set theme at start
+    if(localStorage.getItem('itune_theme')==='dark'){ document.body.setAttribute('data-theme','dark'); themeToggle.textContent='Light'; }
+
+    /* ---------- mini player (popup) ---------- */
+    function openMini(){
+      if(miniWin && !miniWin.closed){ miniWin.focus(); return; }
+      // open small window with basic controls; we'll postMessage to it
+      miniWin = window.open('', 'itune_mini', 'width=360,height=120');
+      if(!miniWin) return alert('Popup blocked — allow popups for this site to use mini player.');
+      miniWin.document.write('<!doctype html><html><head><title>Mini Player</title><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="font-family:Arial;margin:8px">\
+        <div id="now" style="display:flex;align-items:center;gap:8px">\
+          <button id="prev" style="font-size:18px">⏮</button>\
+          <button id="play" style="font-size:18px">▶</button>\
+          <button id="next" style="font-size:18px">⏭</button>\
+          <div id="title" style="margin-left:8px;font-weight:700;overflow:hidden;white-space:nowrap;width:180px"></div>\
+        </div>\
+        <script>window.addEventListener(\"message\",e=>{ if(!e.data) return; if(e.data.type==='state'){ document.getElementById('title').textContent=e.data.title||'No song'; document.getElementById('play').textContent = e.data.playing? '⏸':'▶'; } });\
+        document.getElementById('play').onclick = ()=> opener.postMessage({cmd:'toggle'},'*');\
+        document.getElementById('prev').onclick = ()=> opener.postMessage({cmd:'prev'},'*');\
+        document.getElementById('next').onclick = ()=> opener.postMessage({cmd:'next'},'*');\
+        </sc'+'ript></body></html>');
+      // send initial state
+      sendMini('state');
+      // when closed, keep reference null
+      const timer = setInterval(()=>{ if(miniWin.closed){ miniWin=null; clearInterval(timer); } },500);
+    }
+    openMiniBtn.addEventListener('click', openMini);
+
+    // receive messages from mini (popup)
+    window.addEventListener('message', ev=>{
+      if(!ev.data) return;
+      const d = ev.data;
+      if(d.cmd==='toggle') togglePlay();
+      if(d.cmd==='prev') { prev(); }
+      if(d.cmd==='next') { nextTrack(); }
+    });
+
+    // send updates to mini
+    function sendMini(type, payload){
+      if(!miniWin || miniWin.closed) return;
+      const state = {
+        type:'state',
+        title: viewSongs[currentIndex]? viewSongs[currentIndex].name : 'No song',
+        playing: !audio.paused,
+        ...payload
+      };
+      miniWin.postMessage(state, '*');
+    }
+
+    /* ---------- controls binding ---------- */
+    playBtn.addEventListener('click', ()=>{ if(!audio.src && viewSongs.length) playIndex(0); else togglePlay(); });
+    prevBtn.addEventListener('click', ()=>{ prev(); });
+    nextBtn.addEventListener('click', ()=>{ nextTrack(); });
+    shuffleToggle.addEventListener('change', ()=>{ shuffle = shuffleToggle.checked; });
+    repeatToggle.addEventListener('change', ()=>{ repeat = repeatToggle.checked; });
+
+    function prev(){
+      if(audio.currentTime>3){ audio.currentTime=0; return; }
+      if(currentIndex<=0){ if(repeat) playIndex(viewSongs.length-1); else return; }
+      playIndex(currentIndex-1);
+    }
+
+    /* ---------- helpers ---------- */
+    function escapeHtml(s){ return (s||'').toString().replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+
+    /* ---------- init ---------- */
+    document.getElementById('loadAll').addEventListener('click', loadAllSongs);
+    document.getElementById('createPlaylist').addEventListener('click', ()=>{
+      const n = prompt('Playlist name:'); if(!n) return; if(playlists[n]){ alert('Exists'); return;} playlists[n]=[]; savePlaylists(); renderPlaylists();
+    });
+
+    function savePlaylists(){ localStorage.setItem('itune_playlists_v1', JSON.stringify(playlists)); }
+
+    // auto-load if user clicks nothing: do nothing — user must click "Load All Songs" to fetch (safest)
+    // BUT user wanted auto → try load now:
+    loadAllSongs().catch(()=>{});
+
+    // restore playlists & render
+    renderPlaylists();
+    renderQueue();
+
+    // expose functions to console for debugging
+    window._itune = { playIndex, allSongs, viewSongs, loadAllSongs };
+
+  })();
+  </script>
 </body>
 </html>
