@@ -3,11 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>iTunes 1-to-1 Clone Player (Full Screen)</title>
+  <title>Google Drive iTunes Style Player</title>
   <style>
-    /* iTunes style font & layout */
-    @import url('https://fonts.googleapis.com/css2?family=San+Francisco+Display:wght@400;600&display=swap');
-
+    /* Fullscreen & layout styles adapted from last */
     html, body {
       margin: 0; padding: 0; height: 100%; width: 100%;
       background: #f5f5f7;
@@ -22,10 +20,9 @@
       top: 0; left: 0;
       width: 100vw; height: 100vh;
       background: white;
-      border-radius: 0;
-      box-shadow: none;
-      display: flex; flex-direction: column; overflow: hidden;
-      outline: none;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
     header {
       background: linear-gradient(to bottom, #e7e7e7, #f9f9f9);
@@ -36,7 +33,7 @@
       flex-shrink: 0;
     }
     main {
-      display: flex; flex: 1; height: 100%; overflow: hidden;
+      display: flex; flex: 1; overflow: hidden;
     }
     nav.sidebar {
       width: 230px;
@@ -179,15 +176,6 @@
     table#tracklist td:nth-child(4) { width: 8%; text-align: right; }
     table#tracklist td:nth-child(5) { width: 14%; text-align: center; }
 
-    /* Show error icon/text on track if CORS or playback failed */
-    td.error-msg {
-      color: #d33;
-      font-size: 11px;
-      font-weight: 600;
-      user-select: none;
-      padding-left: 4px;
-    }
-
     /* Sort arrow icons in headers */
     th.sortable {
       position: relative;
@@ -213,6 +201,7 @@
       content: '▾';
       opacity: 1;
     }
+
     /* Player footer */
     footer.player-controls {
       height: 140px;
@@ -344,45 +333,24 @@
       border-radius: 10px;
       border: 2px solid #f0f0f0;
     }
-    /* Add to Playlist dropdown */
-    #add-to-playlist-container {
-      margin-left: 20px;
-      display: flex;
-      align-items: center;
-      user-select: none;
-    }
-    #add-to-playlist-label {
-      font-size: 14px;
-      color: #555;
-      margin-right: 6px;
-    }
-    #add-to-playlist {
-      font-size: 14px;
-      padding: 6px 10px;
-      border-radius: 10px;
-      border: 1px solid #ccc;
-      cursor: pointer;
-      background: white;
-      user-select: none;
-    }
   </style>
 </head>
 <body>
-  <div id="app" role="application" aria-label="iTunes style music player" tabindex="0">
-    <header>iTunes</header>
+  <div id="app" role="application" aria-label="Google Drive Music Player" tabindex="0">
+    <header>Google Drive iTunes Style Player</header>
     <main>
       <nav class="sidebar" role="navigation" aria-label="Library navigation">
         <ul>
-          <li class="active" data-section="library" tabindex="0">Library</li>
-          <li data-section="playlists" tabindex="0">Playlists</li>
-          <li data-section="albums" tabindex="0">Albums</li>
-          <li data-section="artists" tabindex="0">Artists</li>
+          <li class="active" tabindex="0">Library</li>
+          <li tabindex="0">Playlists</li>
+          <li tabindex="0">Albums</li>
+          <li tabindex="0">Artists</li>
         </ul>
         <div class="footer">© 2025 Your Music</div>
       </nav>
       <section class="content" role="main" aria-live="polite" aria-relevant="additions">
         <div id="top-bar">
-          <input id="search-input" type="search" placeholder="Search songs, artists, albums..." aria-label="Search tracks" />
+          <input id="search-input" type="search" placeholder="Search..." aria-label="Search tracks" />
           <select id="sort-select" aria-label="Sort tracks">
             <option value="title" selected>Title</option>
             <option value="artist">Artist</option>
@@ -390,26 +358,19 @@
             <option value="duration">Duration</option>
             <option value="genre">Genre</option>
           </select>
-          <div id="add-to-playlist-container" aria-label="Add selected tracks to playlist">
-            <label id="add-to-playlist-label" for="add-to-playlist">Add to Playlist:</label>
-            <select id="add-to-playlist" aria-describedby="add-to-playlist-label" disabled>
-              <option value="">-- Select Playlist --</option>
-            </select>
-          </div>
         </div>
         <table id="tracklist" aria-label="Track list">
           <thead>
             <tr>
-              <th scope="col" class="sortable" data-key="title" tabindex="0" aria-sort="none">Title</th>
-              <th scope="col" class="sortable" data-key="artist" tabindex="0" aria-sort="none">Artist</th>
-              <th scope="col" class="sortable" data-key="album" tabindex="0" aria-sort="none">Album</th>
-              <th scope="col" class="sortable" data-key="duration" tabindex="0" aria-sort="none" style="text-align:right;">Duration</th>
-              <th scope="col" class="sortable" data-key="genre" tabindex="0" aria-sort="none" style="text-align:center;">Genre</th>
-              <th scope="col" style="width:90px; text-align:center;">Status</th>
+              <th class="sortable" data-key="title" tabindex="0" aria-sort="none">Title</th>
+              <th class="sortable" data-key="artist" tabindex="0" aria-sort="none">Artist</th>
+              <th class="sortable" data-key="album" tabindex="0" aria-sort="none">Album</th>
+              <th class="sortable" data-key="duration" tabindex="0" aria-sort="none" style="text-align:right;">Duration</th>
+              <th class="sortable" data-key="genre" tabindex="0" aria-sort="none" style="text-align:center;">Genre</th>
             </tr>
           </thead>
           <tbody tabindex="0">
-            <!-- Tracks inserted dynamically -->
+            <!-- Track rows get inserted here -->
           </tbody>
         </table>
       </section>
@@ -454,7 +415,6 @@
   let repeat = false;
   let currentSortKey = 'title';
   let currentSortOrder = 'asc';
-  let selectedIndices = new Set();
 
   const tracklistBody = document.querySelector("#tracklist tbody");
   const npTitle = document.getElementById("np-title");
@@ -471,7 +431,6 @@
   const volumeSlider = document.getElementById("volume-slider");
   const searchInput = document.getElementById("search-input");
   const sortSelect = document.getElementById("sort-select");
-  const addToPlaylistSelect = document.getElementById("add-to-playlist");
 
   const audio = new Audio();
   audio.crossOrigin = "anonymous";
@@ -503,40 +462,14 @@
           genre: '',
           duration: 0,
           url: `https://www.googleapis.com/drive/v3/files/${f.id}?alt=media&key=${API_KEY}`,
-          error: null,
         };
       });
       filteredTracks = [...tracks];
-      await preloadDurations();
       sortAndRender();
     } catch (err) {
       alert('Error loading tracks: ' + err.message);
       console.error(err);
     }
-  }
-
-  async function preloadDurations() {
-    for (const track of tracks) {
-      try {
-        track.duration = await getAudioDuration(track.url);
-      } catch {
-        track.duration = 0;
-        track.error = "Cannot load (CORS or unsupported)";
-      }
-    }
-  }
-
-  function getAudioDuration(url) {
-    return new Promise((resolve, reject) => {
-      const tempAudio = new Audio();
-      tempAudio.src = url;
-      tempAudio.preload = "metadata";
-      tempAudio.crossOrigin = "anonymous";
-      tempAudio.addEventListener('loadedmetadata', () => {
-        resolve(tempAudio.duration);
-      });
-      tempAudio.addEventListener('error', () => reject(new Error('Failed to load metadata')));
-    });
   }
 
   function sortAndRender() {
@@ -564,41 +497,22 @@
       const tr = document.createElement("tr");
       tr.tabIndex = 0;
       if (currentTrackIndex === i) tr.classList.add("playing");
-      if (selectedIndices.has(i)) tr.classList.add("selected");
       tr.dataset.index = i;
       tr.innerHTML = `
         <td title="${track.title}">${track.title}</td>
         <td title="${track.artist}">${track.artist}</td>
         <td title="${track.album}">${track.album}</td>
-        <td style="text-align:right;" title="${formatTime(track.duration)}">${formatTime(track.duration)}</td>
-        <td style="text-align:center;" title="${track.genre}">${track.genre}</td>
-        <td class="error-msg">${track.error ? track.error : ""}</td>
+        <td style="text-align:right;">-</td>
+        <td style="text-align:center;">-</td>
       `;
       tracklistBody.appendChild(tr);
-    });
-  }
-
-  function updateSortHeaders() {
-    document.querySelectorAll("#tracklist thead th.sortable").forEach(th => {
-      th.classList.remove("asc", "desc");
-      th.setAttribute("aria-sort", "none");
-      if (th.dataset.key === currentSortKey) {
-        th.classList.add(currentSortOrder);
-        th.setAttribute("aria-sort", currentSortOrder === 'asc' ? 'ascending' : 'descending');
-      }
     });
   }
 
   function playTrack(index) {
     if (index < 0 || index >= filteredTracks.length) return;
     const track = filteredTracks[index];
-    if (track.error) {
-      alert(`Cannot play "${track.title}" due to CORS or unsupported format.`);
-      return;
-    }
     currentTrackIndex = index;
-    selectedIndices.clear();
-    selectedIndices.add(index);
     renderTrackList();
 
     audio.src = track.url;
@@ -740,67 +654,7 @@
     const tr = e.target.closest("tr");
     if (!tr) return;
     const index = Number(tr.dataset.index);
-    if (e.detail === 2) {
-      playTrack(index);
-      return;
-    }
-    handleSelection(e, index);
-  });
-
-  tracklistBody.addEventListener("keydown", e => {
-    const focused = document.activeElement;
-    if (!focused || focused.tagName !== "TR") return;
-    const index = Number(focused.dataset.index);
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      if (index < filteredTracks.length - 1) {
-        tracklistBody.querySelector(`tr[data-index="${index + 1}"]`).focus();
-      }
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      if (index > 0) {
-        tracklistBody.querySelector(`tr[data-index="${index - 1}"]`).focus();
-      }
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      playTrack(index);
-    }
-  });
-
-  function handleSelection(e, index) {
-    if (e.shiftKey && selectedIndices.size) {
-      const last = [...selectedIndices].sort((a,b) => a-b).pop();
-      const [start, end] = [last, index].sort((a,b) => a-b);
-      selectedIndices.clear();
-      for(let i=start; i<=end; i++) selectedIndices.add(i);
-    } else if (e.ctrlKey || e.metaKey) {
-      if (selectedIndices.has(index)) selectedIndices.delete(index);
-      else selectedIndices.add(index);
-    } else {
-      selectedIndices.clear();
-      selectedIndices.add(index);
-    }
-    renderTrackList();
-    updateSelection();
-  }
-
-  function updateSelection() {
-    addToPlaylistSelect.disabled = selectedIndices.size === 0;
-  }
-
-  // Sidebar nav alerts
-  document.querySelectorAll('nav.sidebar li').forEach(li => {
-    li.addEventListener("click", () => {
-      document.querySelector('nav.sidebar li.active').classList.remove("active");
-      li.classList.add("active");
-      alert(`Section '${li.dataset.section}' clicked. Feature not implemented yet.`);
-    });
-    li.addEventListener("keydown", e => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        li.click();
-      }
-    });
+    playTrack(index);
   });
 
   audio.volume = volumeSlider.value;
