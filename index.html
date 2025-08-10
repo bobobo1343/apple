@@ -3,544 +3,223 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>iTunes Clone - Google Drive Player + Playlists</title>
+<title>iTunes Style Player with Playlists</title>
 <style>
-  /* === RESET & BASE === */
-  *, *::before, *::after {
-    box-sizing: border-box;
-  }
+  /* Basic reset and iTunes style layout */
   body {
-    margin:0; padding:0;
-    font-family: "SF Pro Text","SF Pro Icons","Helvetica Neue",Helvetica,Arial,sans-serif;
-    background: #fff;
-    color: #000;
-    user-select: none;
-    -webkit-font-smoothing: antialiased;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+      Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+    margin: 0;
     height: 100vh;
     display: flex;
     flex-direction: column;
-  }
-  body.dark {
-    background: #121212;
-    color: #ddd;
-  }
-  a {
-    color: inherit;
-    text-decoration: none;
-  }
-
-  /* === LAYOUT === */
-  #app {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    overflow: hidden;
+    background: #f0f0f0;
   }
   header {
-    height: 52px;
-    background: linear-gradient(to bottom, #f5f5f5, #e8e8e8);
-    border-bottom: 1px solid #c0c0c0;
-    display: flex;
-    align-items: center;
-    padding: 0 10px;
-  }
-  body.dark header {
-    background: linear-gradient(to bottom, #2a2a2a, #1a1a1a);
-    border-color: #444;
-  }
-  header h1 {
-    font-weight: 700;
-    font-size: 1.2rem;
-    flex: 1;
-    user-select: text;
-  }
-  #darkToggle {
-    margin-left: 10px;
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-  }
-  #darkToggle input {
-    width: 40px;
-    height: 20px;
-    -webkit-appearance: none;
-    background: #ddd;
-    outline: none;
-    border-radius: 10px;
-    position: relative;
-    transition: background 0.3s;
-    cursor: pointer;
-  }
-  #darkToggle input:checked {
-    background: #4d90fe;
-  }
-  #darkToggle input::before {
-    content: "";
-    position: absolute;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    top: 1px;
-    left: 1px;
-    background: white;
-    transition: 0.3s;
-  }
-  #darkToggle input:checked::before {
-    transform: translateX(20px);
+    background: #007aff;
+    color: white;
+    padding: 10px 20px;
+    font-weight: 600;
+    font-size: 1.5em;
   }
   main {
     flex: 1;
     display: flex;
-    background: #f0f0f0;
+    overflow: hidden;
   }
-  body.dark main {
-    background: #181818;
-  }
-
-  #sidebar {
+  /* Sidebar for playlists */
+  #playlists {
     width: 220px;
-    background: #f9f9f9;
-    border-right: 1px solid #c0c0c0;
+    background: #ffffff;
+    border-right: 1px solid #ccc;
+    padding: 10px;
     display: flex;
     flex-direction: column;
   }
-  body.dark #sidebar {
-    background: #222;
-    border-color: #333;
-  }
-  #sidebar header {
-    height: 48px;
-    font-weight: 600;
-    padding: 12px 15px;
-    border-bottom: 1px solid #c0c0c0;
-    font-size: 1rem;
-    user-select: none;
-  }
-  body.dark #sidebar header {
-    border-color: #444;
+  #playlists h2 {
+    margin-top: 0;
+    font-size: 1.2em;
+    margin-bottom: 10px;
   }
   #playlistList {
     flex: 1;
     overflow-y: auto;
-    padding: 5px 0;
   }
   #playlistList button {
     width: 100%;
-    padding: 10px 15px;
+    padding: 8px 6px;
+    margin-bottom: 4px;
     border: none;
-    background: transparent;
+    background: #eee;
+    cursor: pointer;
     text-align: left;
-    font-size: 0.9rem;
-    color: #333;
-    cursor: pointer;
-    border-left: 4px solid transparent;
-    transition: background 0.2s, border-color 0.2s;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    border-radius: 3px;
+    font-size: 1em;
   }
-  #playlistList button:hover,
   #playlistList button.active {
-    background: #d0d0d0;
-    border-left-color: #007aff;
-    color: #000;
-  }
-  body.dark #playlistList button {
-    color: #bbb;
-  }
-  body.dark #playlistList button:hover,
-  body.dark #playlistList button.active {
-    background: #333;
-    border-left-color: #4d90fe;
-    color: #fff;
-  }
-  #playlistList button .removePlaylist {
-    background: none;
-    border: none;
-    color: inherit;
-    font-weight: 700;
-    font-size: 1rem;
-    cursor: pointer;
-    padding-left: 10px;
-    user-select: none;
-    opacity: 0.4;
-    transition: opacity 0.3s;
-  }
-  #playlistList button:hover .removePlaylist {
-    opacity: 1;
+    background: #007aff;
+    color: white;
+    font-weight: bold;
   }
   #btnNewPlaylist {
-    margin: 10px;
+    margin-top: 10px;
     padding: 8px;
-    font-weight: 600;
+    font-size: 1em;
     cursor: pointer;
-    border: 1px solid #aaa;
-    border-radius: 4px;
-    background: #fff;
-    transition: background 0.3s;
-  }
-  #btnNewPlaylist:hover {
-    background: #e0e0e0;
-  }
-  body.dark #btnNewPlaylist {
-    background: #222;
-    border-color: #555;
-    color: #eee;
-  }
-  body.dark #btnNewPlaylist:hover {
-    background: #444;
+    background: #007aff;
+    color: white;
+    border: none;
+    border-radius: 3px;
   }
 
-  #content {
+  /* Track list area */
+  #trackSection {
     flex: 1;
     display: flex;
     flex-direction: column;
   }
-  #searchBar {
-    padding: 8px 15px;
-    border-bottom: 1px solid #c0c0c0;
+  #searchContainer {
+    padding: 10px;
     background: #fff;
-  }
-  body.dark #searchBar {
-    background: #121212;
-    border-color: #333;
+    border-bottom: 1px solid #ccc;
   }
   #searchInput {
     width: 100%;
-    padding: 6px 12px;
-    font-size: 1rem;
-    border: 1px solid #bbb;
-    border-radius: 4px;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-  #searchInput:focus {
-    border-color: #007aff;
-  }
-  body.dark #searchInput {
-    background: #222;
-    border-color: #444;
-    color: #eee;
-  }
-  body.dark #searchInput:focus {
-    border-color: #4d90fe;
+    padding: 8px 6px;
+    font-size: 1em;
+    border-radius: 3px;
+    border: 1px solid #ccc;
   }
 
-  #tracklistContainer {
-    flex: 1;
-    overflow-y: auto;
-    background: #fff;
-  }
-  body.dark #tracklistContainer {
-    background: #181818;
-  }
-  table#tracklist {
+  table {
     width: 100%;
     border-collapse: collapse;
+    background: white;
   }
-  #tracklist thead {
-    background: #e5e5e5;
+  thead tr {
+    background: #ddd;
   }
-  body.dark #tracklist thead {
-    background: #262626;
-  }
-  #tracklist thead th {
-    padding: 8px 12px;
-    font-weight: 600;
-    font-size: 0.9rem;
-    cursor: pointer;
-    user-select: none;
+  th, td {
+    padding: 8px 6px;
+    text-align: left;
     border-bottom: 1px solid #ccc;
-    white-space: nowrap;
-    position: relative;
   }
-  body.dark #tracklist thead th {
-    border-color: #444;
+  tr.playing {
+    background: #dbe9ff;
   }
-  #tracklist thead th.sortable:hover {
-    background: #d0d0d0;
-  }
-  body.dark #tracklist thead th.sortable:hover {
-    background: #333;
-  }
-  #tracklist thead th.sorted-asc::after,
-  #tracklist thead th.sorted-desc::after {
-    content: "";
-    position: absolute;
-    right: 8px;
-    top: 50%;
-    border: 6px solid transparent;
-  }
-  #tracklist thead th.sorted-asc::after {
-    border-bottom-color: #007aff;
-    margin-top: -8px;
-  }
-  #tracklist thead th.sorted-desc::after {
-    border-top-color: #007aff;
-    margin-top: 2px;
-  }
-  #tracklist tbody tr {
+  tr:hover {
+    background: #f0f8ff;
     cursor: pointer;
-    user-select: none;
   }
-  #tracklist tbody tr:hover,
-  #tracklist tbody tr.playing {
-    background: #d0e7ff;
+  button.btnAddTrack, button.btnRemoveTrack {
+    background: transparent;
+    border: none;
+    font-size: 1.2em;
+    cursor: pointer;
   }
-  body.dark #tracklist tbody tr:hover,
-  body.dark #tracklist tbody tr.playing {
-    background: #004080;
+  button.btnAddTrack:hover {
+    color: green;
   }
-  #tracklist tbody td {
-    padding: 6px 12px;
-    font-size: 0.9rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  #tracklist tbody tr.playing td {
-    font-weight: 700;
-    color: #007aff;
+  button.btnRemoveTrack:hover {
+    color: red;
   }
 
   /* Player controls */
   #playerControls {
-    height: 90px;
-    background: #f5f5f5;
-    border-top: 1px solid #c0c0c0;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 0 15px;
-  }
-  body.dark #playerControls {
-    background: #222;
-    border-color: #333;
-  }
-  #controlsTop {
+    background: #007aff;
+    color: white;
+    padding: 12px 20px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
   }
-  .btn {
+  #btnPlayPause, #btnPrev, #btnNext {
+    cursor: pointer;
+    font-size: 1.5em;
+    margin: 0 10px;
     background: transparent;
     border: none;
-    cursor: pointer;
-    color: #444;
-    font-size: 1.6rem;
-    margin: 0 5px;
-    user-select: none;
-    outline-offset: 2px;
-  }
-  .btn:focus {
-    outline: 2px solid #007aff;
-  }
-  .btn:hover {
-    color: #007aff;
-  }
-  body.dark .btn {
-    color: #bbb;
-  }
-  body.dark .btn:hover {
-    color: #4d90fe;
-  }
-  .btn.active {
-    color: #007aff;
-  }
-  #btnPlayPause {
-    font-size: 2.4rem;
-    margin: 0 15px;
-  }
-  #currentTrackInfo {
-    flex: 1;
-    font-weight: 600;
-    font-size: 1rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    user-select: text;
-    padding-left: 10px;
-  }
-  body.dark #currentTrackInfo {
-    color: #eee;
+    color: white;
   }
   #progressContainer {
-    margin-top: 8px;
-    height: 12px;
-    background: #ccc;
-    border-radius: 6px;
-    cursor: pointer;
+    flex: 1;
+    height: 10px;
+    background: rgba(255,255,255,0.4);
+    border-radius: 5px;
+    margin: 0 15px;
     position: relative;
-  }
-  body.dark #progressContainer {
-    background: #444;
+    cursor: pointer;
   }
   #progressBar {
     height: 100%;
-    background: #007aff;
+    background: white;
     width: 0%;
-    border-radius: 6px;
-    transition: width 0.1s linear;
-  }
-  #progressTooltip {
-    position: absolute;
-    top: -26px;
-    background: #007aff;
-    color: white;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.2s;
-    white-space: nowrap;
-  }
-  #progressContainer:hover #progressTooltip {
-    opacity: 1;
+    border-radius: 5px;
   }
   #timeDisplay {
-    font-size: 0.8rem;
+    font-size: 0.9em;
+    width: 80px;
     text-align: right;
-    margin-top: 2px;
-    color: #666;
-  }
-  body.dark #timeDisplay {
-    color: #aaa;
-  }
-  #volumeControl {
-    margin-left: 15px;
-    display: flex;
-    align-items: center;
-  }
-  #volumeSlider {
-    cursor: pointer;
-    width: 90px;
-  }
-
-  /* Scrollbar */
-  ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
-  }
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  ::-webkit-scrollbar-thumb {
-    background-color: #bbb;
-    border-radius: 5px;
-    border: 2px solid transparent;
-    background-clip: content-box;
-  }
-  body.dark ::-webkit-scrollbar-thumb {
-    background-color: #555;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background-color: #999;
-  }
-  body.dark ::-webkit-scrollbar-thumb:hover {
-    background-color: #777;
-  }
-
-  /* Responsive */
-  @media (max-width: 700px) {
-    #sidebar {
-      display: none;
-    }
   }
 </style>
 </head>
 <body>
-<div id="app" role="main" aria-label="iTunes Music Player">
-
-<header>
-  <h1>iTunes Clone Player</h1>
-  <label id="darkToggle" aria-label="Toggle dark mode">
-    <input type="checkbox" id="darkModeCheckbox" aria-checked="false" />
-  </label>
-</header>
-
+<header>iTunes Style Music Player</header>
 <main>
-  <nav id="sidebar" aria-label="Playlists">
-    <header>Playlists</header>
-    <div id="playlistList" tabindex="0" role="listbox" aria-activedescendant="playlist-all">
-      <!-- Playlists here -->
+  <aside id="playlists">
+    <h2>Playlists</h2>
+    <div id="playlistList">
+      <!-- Playlists buttons inserted here -->
     </div>
-    <button id="btnNewPlaylist" title="Create new playlist">+ New Playlist</button>
-  </nav>
-
-  <section id="content" aria-label="Track list and player controls">
-    <div id="searchBar">
-      <input id="searchInput" type="search" placeholder="Search tracks" aria-label="Search tracks" />
+    <button id="btnNewPlaylist">+ New Playlist</button>
+  </aside>
+  <section id="trackSection">
+    <div id="searchContainer">
+      <input type="search" id="searchInput" placeholder="Search tracks..." aria-label="Search tracks" />
     </div>
-    <div id="tracklistContainer" tabindex="0" aria-label="Track list">
-      <table id="tracklist" aria-live="polite" aria-relevant="all" aria-rowcount="0" role="grid" aria-multiselectable="false">
-        <thead>
-          <tr>
-            <th class="sortable" data-key="trackNumber" scope="col" tabindex="0" aria-sort="none">#</th>
-            <th class="sortable" data-key="title" scope="col" tabindex="0" aria-sort="none">Name</th>
-            <th class="sortable" data-key="artist" scope="col" tabindex="0" aria-sort="none">Artist</th>
-            <th class="sortable" data-key="album" scope="col" tabindex="0" aria-sort="none">Album</th>
-            <th class="sortable" data-key="genre" scope="col" tabindex="0" aria-sort="none">Genre</th>
-            <th class="sortable" data-key="duration" scope="col" tabindex="0" aria-sort="none">Time</th>
-            <th scope="col" tabindex="-1" aria-hidden="true" style="width: 1rem;"></th>
-          </tr>
-        </thead>
-        <tbody id="tracklistBody" tabindex="0" role="rowgroup" aria-live="polite" aria-relevant="additions"></tbody>
-      </table>
-    </div>
-
-    <div id="playerControls" aria-label="Player controls">
-      <div id="controlsTop">
-        <div>
-          <button class="btn" id="btnShuffle" aria-pressed="false" title="Shuffle">&#128256;</button>
-          <button class="btn" id="btnPrev" aria-label="Previous Track" title="Previous">&#9194;</button>
-          <button class="btn" id="btnPlayPause" aria-label="Play/Pause" title="Play">&#9654;</button>
-          <button class="btn" id="btnNext" aria-label="Next Track" title="Next">&#9193;</button>
-          <button class="btn" id="btnRepeat" aria-pressed="false" title="Repeat">&#128257;</button>
-        </div>
-        <div id="currentTrackInfo" aria-live="polite" aria-atomic="true" aria-relevant="text">Loading...</div>
-        <div id="volumeControl" aria-label="Volume control">
-          <input type="range" id="volumeSlider" min="0" max="1" step="0.01" aria-valuemin="0" aria-valuemax="1" aria-valuenow="1" aria-label="Volume slider" />
-        </div>
-      </div>
-      <div id="progressContainer" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0" aria-label="Track progress">
-        <div id="progressBar"></div>
-        <div id="progressTooltip" aria-hidden="true"></div>
-      </div>
-      <div id="timeDisplay" aria-live="polite" aria-atomic="true">0:00 / 0:00</div>
-    </div>
+    <table id="tracklist" aria-label="Track list">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Title</th>
+          <th>Artist</th>
+          <th>Album</th>
+          <th>Genre</th>
+          <th>Duration</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tracklistBody">
+        <!-- Tracks inserted here -->
+      </tbody>
+    </table>
   </section>
 </main>
+<footer id="playerControls">
+  <button id="btnPrev" aria-label="Previous">&#9664;&#9664;</button>
+  <button id="btnPlayPause" aria-label="Play">&#9654;</button>
+  <button id="btnNext" aria-label="Next">&#9654;&#9654;</button>
+  <div id="progressContainer" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0" aria-label="Playback progress">
+    <div id="progressBar"></div>
+  </div>
+  <div id="timeDisplay" aria-live="polite" aria-atomic="true">0:00 / 0:00</div>
+</footer>
 
 <script>
 (() => {
-  "use strict";
-
-  // Your Google Drive API key and folder ID here:
-  const API_KEY = "AIzaSyDsYE91wH7UDwu8eZNb1CFuVcilgYeZhI";
+  // Your Google Drive API key and folder ID here
+  const API_KEY = "AIzaSyDsYE91wH7UDwu8eZNbD1CFuVcilgYeZhI";
   const FOLDER_ID = "1DGz9zEQh29EAqTZpmWK5mwSj5HComnkn";
-
-  const body = document.body;
-  const darkModeCheckbox = document.getElementById("darkModeCheckbox");
 
   const playlistList = document.getElementById("playlistList");
   const btnNewPlaylist = document.getElementById("btnNewPlaylist");
   const tracklistBody = document.getElementById("tracklistBody");
-
   const searchInput = document.getElementById("searchInput");
 
   const btnPlayPause = document.getElementById("btnPlayPause");
   const btnNext = document.getElementById("btnNext");
   const btnPrev = document.getElementById("btnPrev");
-  const btnShuffle = document.getElementById("btnShuffle");
-  const btnRepeat = document.getElementById("btnRepeat");
-  const volumeSlider = document.getElementById("volumeSlider");
-
-  const currentTrackInfo = document.getElementById("currentTrackInfo");
-
   const progressContainer = document.getElementById("progressContainer");
   const progressBar = document.getElementById("progressBar");
-  const progressTooltip = document.getElementById("progressTooltip");
   const timeDisplay = document.getElementById("timeDisplay");
 
   const audio = new Audio();
@@ -551,20 +230,17 @@
   let currentPlaylist = "All Songs";
   let filteredTracks = [];
   let currentTrackIndex = -1;
-
   let isPlaying = false;
-  let shuffle = false;
-  let repeat = false;
 
-  // Helper: format seconds to mm:ss
+  // Helper to format seconds to mm:ss
   function formatTime(secs) {
     if (isNaN(secs) || secs <= 0) return "0:00";
     const m = Math.floor(secs / 60);
     const s = Math.floor(secs % 60);
-    return `${m}:${s.toString().padStart(2,"0")}`;
+    return `${m}:${s.toString().padStart(2, "0")}`;
   }
 
-  // Fetch Google Drive files recursively handling pagination
+  // Fetch Google Drive files from folder with pagination
   async function fetchDriveFiles(pageToken = "") {
     try {
       let url = `https://www.googleapis.com/drive/v3/files?key=${API_KEY}&q='${FOLDER_ID}'+in+parents+and+trashed=false&fields=nextPageToken,files(id,name,mimeType)&pageSize=1000`;
@@ -579,6 +255,7 @@
     }
   }
 
+  // Parse filename into metadata
   function parseTrackMetadata(filename, index) {
     let baseName = filename.replace(/\.[^/.]+$/, "");
     let parts = baseName.split(" - ");
@@ -597,237 +274,12 @@
     };
   }
 
-  function sortTracks(arr, key, order) {
-    const sorted = [...arr];
-    sorted.sort((a, b) => {
-      let va = a[key];
-      let vb = b[key];
-      if (key === "trackNumber" || key === "duration") {
-        va = Number(va);
-        vb = Number(vb);
-      } else {
-        va = va.toLowerCase();
-        vb = vb.toLowerCase();
-      }
-      if (va < vb) return order === "asc" ? -1 : 1;
-      if (va > vb) return order === "asc" ? 1 : -1;
-      return 0;
-    });
-    return sorted;
+  // Build playable URL to avoid CORS
+  function buildPlayableUrl(fileId) {
+    return `https://drive.google.com/uc?export=download&id=${fileId}`;
   }
 
-  function renderTrackList(tracksToRender) {
-    tracklistBody.innerHTML = "";
-    tracksToRender.forEach((track, i) => {
-      const tr = document.createElement("tr");
-      tr.setAttribute("data-index", i);
-      if (i === currentTrackIndex) tr.classList.add("playing");
-      tr.tabIndex = 0;
-      tr.role = "row";
-
-      tr.innerHTML = `
-        <td>${track.trackNumber}</td>
-        <td title="${track.title}">${track.title}</td>
-        <td title="${track.artist}">${track.artist}</td>
-        <td title="${track.album}">${track.album}</td>
-        <td title="${track.genre}">${track.genre}</td>
-        <td>${formatTime(track.duration)}</td>
-        <td><button aria-label="Add to playlist" class="btnAddTrack" data-index="${i}">＋</button></td>
-      `;
-      tr.querySelector(".btnAddTrack").addEventListener("click", e => {
-        e.stopPropagation();
-        addTrackToPlaylist(i);
-      });
-
-      tr.addEventListener("click", () => playTrack(i));
-      tr.addEventListener("keydown", e => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          playTrack(i);
-        }
-      });
-
-      tracklistBody.appendChild(tr);
-    });
-    tracklistBody.parentElement.setAttribute("aria-rowcount", tracksToRender.length);
-  }
-
-  function renderPlaylists() {
-    playlistList.innerHTML = "";
-    Object.keys(playlists).forEach(plName => {
-      const btn = document.createElement("button");
-      btn.textContent = plName;
-      btn.id = `playlist-${plName.replace(/\s/g,"-").toLowerCase()}`;
-      btn.className = plName === currentPlaylist ? "active" : "";
-      btn.setAttribute("role", "option");
-      btn.setAttribute("aria-selected", plName === currentPlaylist ? "true" : "false");
-
-      // Context menu: Rename / Delete playlist
-      btn.addEventListener("contextmenu", e => {
-        e.preventDefault();
-        const action = prompt(`Rename or type DELETE to remove playlist '${plName}':`, plName);
-        if (action === null) return;
-        if (action.toUpperCase() === "DELETE") {
-          if (confirm(`Delete playlist '${plName}'? This cannot be undone.`)) {
-            delete playlists[plName];
-            if (currentPlaylist === plName) currentPlaylist = "All Songs";
-            renderPlaylists();
-            applyFiltersAndSort();
-          }
-          return;
-        }
-        if (action.trim() && !playlists[action.trim()]) {
-          playlists[action.trim()] = playlists[plName];
-          delete playlists[plName];
-          if (currentPlaylist === plName) currentPlaylist = action.trim();
-          renderPlaylists();
-          applyFiltersAndSort();
-        } else alert("Invalid name or playlist already exists.");
-      });
-
-      btn.addEventListener("click", () => {
-        currentPlaylist = plName;
-        applyFiltersAndSort();
-        renderPlaylists();
-      });
-
-      playlistList.appendChild(btn);
-    });
-  }
-
-  function addTrackToPlaylist(trackIndex) {
-    if (currentPlaylist === "All Songs") {
-      alert("Cannot add tracks to 'All Songs' playlist.");
-      return;
-    }
-    const track = filteredTracks[trackIndex];
-    if (!track) return;
-    const plTracks = playlists[currentPlaylist];
-    if (plTracks.find(t => t.fileId === track.fileId)) {
-      alert("Track already in playlist.");
-      return;
-    }
-    plTracks.push(track);
-    alert(`Added "${track.title}" to playlist "${currentPlaylist}"`);
-    applyFiltersAndSort();
-  }
-
-  function removeTrackFromPlaylist(trackIndex) {
-    if (currentPlaylist === "All Songs") {
-      alert("Cannot remove tracks from 'All Songs' playlist.");
-      return;
-    }
-    const plTracks = playlists[currentPlaylist];
-    const track = filteredTracks[trackIndex];
-    if (!track) return;
-    const idxInPlaylist = plTracks.findIndex(t => t.fileId === track.fileId);
-    if (idxInPlaylist === -1) {
-      alert("Track not found in playlist.");
-      return;
-    }
-    plTracks.splice(idxInPlaylist, 1);
-    alert(`Removed "${track.title}" from playlist "${currentPlaylist}"`);
-    applyFiltersAndSort();
-  }
-
-  // Render playlist tracks with remove button if not "All Songs"
-  function renderTrackListWithRemove(tracksToRender) {
-    tracklistBody.innerHTML = "";
-    tracksToRender.forEach((track, i) => {
-      const tr = document.createElement("tr");
-      tr.setAttribute("data-index", i);
-      if (i === currentTrackIndex) tr.classList.add("playing");
-      tr.tabIndex = 0;
-      tr.role = "row";
-
-      tr.innerHTML = `
-        <td>${track.trackNumber}</td>
-        <td title="${track.title}">${track.title}</td>
-        <td title="${track.artist}">${track.artist}</td>
-        <td title="${track.album}">${track.album}</td>
-        <td title="${track.genre}">${track.genre}</td>
-        <td>${formatTime(track.duration)}</td>
-        <td>${currentPlaylist === "All Songs" ? "" : `<button aria-label="Remove from playlist" class="btnRemoveTrack" data-index="${i}">×</button>`}</td>
-      `;
-
-      if (currentPlaylist !== "All Songs") {
-        tr.querySelector(".btnRemoveTrack").addEventListener("click", e => {
-          e.stopPropagation();
-          removeTrackFromPlaylist(i);
-        });
-      }
-
-      tr.addEventListener("click", () => playTrack(i));
-      tr.addEventListener("keydown", e => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          playTrack(i);
-        }
-      });
-
-      tracklistBody.appendChild(tr);
-    });
-    tracklistBody.parentElement.setAttribute("aria-rowcount", tracksToRender.length);
-  }
-
-  // Play track by index from filteredTracks
-  function playTrack(index) {
-    if (index < 0 || index >= filteredTracks.length) return;
-    currentTrackIndex = index;
-    const track = filteredTracks[index];
-    audio.src = track.url;
-    audio.play().catch(e => {
-      console.warn("Play error:", e);
-    });
-    isPlaying = true;
-    updatePlayPauseButton();
-    updateTrackHighlight();
-    updateCurrentTrackInfo();
-  }
-
-  function updatePlayPauseButton() {
-    btnPlayPause.innerHTML = isPlaying ? "&#10073;&#10073;" : "&#9654;";
-    btnPlayPause.setAttribute("aria-label", isPlaying ? "Pause" : "Play");
-  }
-
-  function updateTrackHighlight() {
-    const trs = tracklistBody.querySelectorAll("tr");
-    trs.forEach((tr, i) => {
-      tr.classList.toggle("playing", i === currentTrackIndex);
-    });
-  }
-
-  function updateCurrentTrackInfo() {
-    if (currentTrackIndex < 0 || currentTrackIndex >= filteredTracks.length) {
-      currentTrackInfo.textContent = "No track selected";
-      return;
-    }
-    const t = filteredTracks[currentTrackIndex];
-    currentTrackInfo.textContent = `${t.title} — ${t.artist} [${t.album}]`;
-  }
-
-  function applyFiltersAndSort() {
-    const plTracks = playlists[currentPlaylist] || [];
-    const searchTerm = searchInput.value.trim().toLowerCase();
-    filteredTracks = plTracks.filter(t => {
-      if (!searchTerm) return true;
-      return (
-        t.title.toLowerCase().includes(searchTerm) ||
-        t.artist.toLowerCase().includes(searchTerm) ||
-        t.album.toLowerCase().includes(searchTerm) ||
-        t.genre.toLowerCase().includes(searchTerm)
-      );
-    });
-    filteredTracks = sortTracks(filteredTracks, currentSortKey, currentSortOrder);
-
-    if (currentPlaylist === "All Songs") {
-      renderTrackList(filteredTracks);
-    } else {
-      renderTrackListWithRemove(filteredTracks);
-    }
-  }
-
-  // Load durations by preloading audio metadata (async)
+  // Load durations asynchronously
   async function loadTrackDurations() {
     for (let i = 0; i < tracks.length; i++) {
       const track = tracks[i];
@@ -851,12 +303,7 @@
     }
   }
 
-  // Build playable URL using Google Drive "uc?export=download" format - no CORS
-  function buildPlayableUrl(fileId) {
-    return `https://drive.google.com/uc?export=download&id=${fileId}`;
-  }
-
-  // Load all tracks from Drive folder with pagination
+  // Load all tracks from Drive folder
   async function loadTracks() {
     let allFiles = [];
     let pageToken = "";
@@ -883,61 +330,143 @@
 
     await loadTrackDurations();
 
-    applyFiltersAndSort();
+    applyFiltersAndRender();
     renderPlaylists();
 
     currentTrackIndex = -1;
-    updateCurrentTrackInfo();
   }
 
-  // Audio events
-  audio.addEventListener("ended", () => {
-    if (repeat) {
-      playTrack(currentTrackIndex);
-    } else if (shuffle) {
-      let randIndex;
-      do {
-        randIndex = Math.floor(Math.random() * filteredTracks.length);
-      } while (randIndex === currentTrackIndex && filteredTracks.length > 1);
-      playTrack(randIndex);
-    } else {
-      playTrack(currentTrackIndex + 1);
-    }
-  });
+  // Render playlist buttons
+  function renderPlaylists() {
+    playlistList.innerHTML = "";
+    Object.keys(playlists).forEach(plName => {
+      const btn = document.createElement("button");
+      btn.textContent = plName;
+      btn.className = plName === currentPlaylist ? "active" : "";
+      btn.onclick = () => {
+        currentPlaylist = plName;
+        applyFiltersAndRender();
+        renderPlaylists();
+      };
+      playlistList.appendChild(btn);
+    });
+  }
 
-  audio.addEventListener("timeupdate", () => {
-    if (!audio.duration || isNaN(audio.duration)) return;
-    const progressPercent = (audio.currentTime / audio.duration) * 100;
-    progressBar.style.width = `${progressPercent}%`;
-    progressContainer.setAttribute("aria-valuenow", progressPercent.toFixed(0));
-    timeDisplay.textContent = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
-  });
+  // Render tracks table
+  function renderTrackList(tracksToRender) {
+    tracklistBody.innerHTML = "";
+    tracksToRender.forEach((track, i) => {
+      const tr = document.createElement("tr");
+      tr.className = i === currentTrackIndex ? "playing" : "";
+      tr.tabIndex = 0;
+      tr.innerHTML = `
+        <td>${track.trackNumber}</td>
+        <td>${track.title}</td>
+        <td>${track.artist}</td>
+        <td>${track.album}</td>
+        <td>${track.genre}</td>
+        <td>${formatTime(track.duration)}</td>
+        <td>${
+          currentPlaylist === "All Songs"
+            ? `<button class="btnAddTrack" aria-label="Add to playlist">＋</button>`
+            : `<button class="btnRemoveTrack" aria-label="Remove from playlist">×</button>`
+        }</td>
+      `;
+      // Click row to play track
+      tr.addEventListener("click", (e) => {
+        if (
+          e.target.classList.contains("btnAddTrack") ||
+          e.target.classList.contains("btnRemoveTrack")
+        ) {
+          return; // don't play if clicked button
+        }
+        playTrack(i);
+      });
+      // Add button event
+      if (currentPlaylist === "All Songs") {
+        tr.querySelector(".btnAddTrack").addEventListener("click", (e) => {
+          e.stopPropagation();
+          addTrackToPlaylist(i);
+        });
+      } else {
+        // Remove button event
+        tr.querySelector(".btnRemoveTrack").addEventListener("click", (e) => {
+          e.stopPropagation();
+          removeTrackFromPlaylist(i);
+        });
+      }
+      tracklistBody.appendChild(tr);
+    });
+  }
 
-  // Progress bar click and tooltip
-  progressContainer.addEventListener("mousemove", e => {
-    const rect = progressContainer.getBoundingClientRect();
-    const posX = e.clientX - rect.left;
-    const ratio = Math.min(Math.max(posX / rect.width, 0), 1);
-    if (audio.duration && !isNaN(audio.duration)) {
-      const hoverTime = ratio * audio.duration;
-      progressTooltip.style.left = `${posX}px`;
-      progressTooltip.textContent = formatTime(hoverTime);
-      progressTooltip.style.opacity = "1";
+  // Add track to current playlist (if not All Songs)
+  function addTrackToPlaylist(trackIndex) {
+    if (currentPlaylist === "All Songs") {
+      alert("Cannot add tracks to 'All Songs' playlist.");
+      return;
     }
-  });
-  progressContainer.addEventListener("mouseleave", () => {
-    progressTooltip.style.opacity = "0";
-  });
-  progressContainer.addEventListener("click", e => {
-    const rect = progressContainer.getBoundingClientRect();
-    const posX = e.clientX - rect.left;
-    const ratio = Math.min(Math.max(posX / rect.width, 0), 1);
-    if (audio.duration && !isNaN(audio.duration)) {
-      audio.currentTime = ratio * audio.duration;
+    const track = filteredTracks[trackIndex];
+    if (!track) return;
+    const plTracks = playlists[currentPlaylist];
+    if (plTracks.find(t => t.fileId === track.fileId)) {
+      alert("Track already in playlist.");
+      return;
     }
-  });
+    plTracks.push(track);
+    applyFiltersAndRender();
+  }
 
-  // Control buttons handlers
+  // Remove track from current playlist (if not All Songs)
+  function removeTrackFromPlaylist(trackIndex) {
+    if (currentPlaylist === "All Songs") {
+      alert("Cannot remove tracks from 'All Songs' playlist.");
+      return;
+    }
+    const plTracks = playlists[currentPlaylist];
+    const track = filteredTracks[trackIndex];
+    if (!track) return;
+    const idxInPlaylist = plTracks.findIndex(t => t.fileId === track.fileId);
+    if (idxInPlaylist === -1) {
+      alert("Track not found in playlist.");
+      return;
+    }
+    plTracks.splice(idxInPlaylist, 1);
+    applyFiltersAndRender();
+  }
+
+  // Filter by search, update filteredTracks, and render track list
+  function applyFiltersAndRender() {
+    const searchTerm = searchInput.value.trim().toLowerCase();
+    let plTracks = playlists[currentPlaylist] || [];
+    filteredTracks = plTracks.filter(t => {
+      if (!searchTerm) return true;
+      return (
+        t.title.toLowerCase().includes(searchTerm) ||
+        t.artist.toLowerCase().includes(searchTerm) ||
+        t.album.toLowerCase().includes(searchTerm) ||
+        t.genre.toLowerCase().includes(searchTerm)
+      );
+    });
+    renderTrackList(filteredTracks);
+  }
+
+  // Play selected track
+  function playTrack(index) {
+    if (index < 0 || index >= filteredTracks.length) return;
+    currentTrackIndex = index;
+    audio.src = filteredTracks[index].url;
+    audio.play().catch(() => {});
+    isPlaying = true;
+    updatePlayPauseButton();
+    renderTrackList(filteredTracks);
+  }
+
+  // Update play/pause button icon
+  function updatePlayPauseButton() {
+    btnPlayPause.textContent = isPlaying ? "❚❚" : "▶";
+  }
+
+  // Player controls
   btnPlayPause.addEventListener("click", () => {
     if (isPlaying) {
       audio.pause();
@@ -952,118 +481,52 @@
     }
     updatePlayPauseButton();
   });
-
   btnNext.addEventListener("click", () => {
-    if (shuffle) {
-      let randIndex;
-      do {
-        randIndex = Math.floor(Math.random() * filteredTracks.length);
-      } while (randIndex === currentTrackIndex && filteredTracks.length > 1);
-      playTrack(randIndex);
-    } else {
-      playTrack(currentTrackIndex + 1);
-    }
+    playTrack((currentTrackIndex + 1) % filteredTracks.length);
   });
-
   btnPrev.addEventListener("click", () => {
-    playTrack(currentTrackIndex - 1);
+    playTrack((currentTrackIndex - 1 + filteredTracks.length) % filteredTracks.length);
   });
 
-  btnShuffle.addEventListener("click", () => {
-    shuffle = !shuffle;
-    btnShuffle.setAttribute("aria-pressed", shuffle.toString());
-    btnShuffle.classList.toggle("active", shuffle);
+  // Update progress bar
+  audio.addEventListener("timeupdate", () => {
+    if (!audio.duration || isNaN(audio.duration)) return;
+    const percent = (audio.currentTime / audio.duration) * 100;
+    progressBar.style.width = percent + "%";
+    timeDisplay.textContent = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
   });
 
-  btnRepeat.addEventListener("click", () => {
-    repeat = !repeat;
-    btnRepeat.setAttribute("aria-pressed", repeat.toString());
-    btnRepeat.classList.toggle("active", repeat);
-  });
-
-  volumeSlider.addEventListener("input", () => {
-    audio.volume = volumeSlider.value;
-    volumeSlider.setAttribute("aria-valuenow", volumeSlider.value);
-  });
-
-  // Search input handler
-  searchInput.addEventListener("input", () => {
-    applyFiltersAndSort();
-  });
-
-  // Sort headers click & keyboard
-  let currentSortKey = "trackNumber";
-  let currentSortOrder = "asc";
-
-  const headers = document.querySelectorAll("#tracklist thead th.sortable");
-  headers.forEach(th => {
-    th.addEventListener("click", () => {
-      const key = th.getAttribute("data-key");
-      if (currentSortKey === key) {
-        currentSortOrder = currentSortOrder === "asc" ? "desc" : "asc";
-      } else {
-        currentSortKey = key;
-        currentSortOrder = "asc";
-      }
-      updateSortHeaders();
-      applyFiltersAndSort();
-    });
-    th.addEventListener("keydown", e => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        th.click();
-      }
-    });
-  });
-
-  function updateSortHeaders() {
-    headers.forEach(th => {
-      th.classList.remove("sorted-asc", "sorted-desc");
-      th.setAttribute("aria-sort", "none");
-    });
-    const activeTh = Array.from(headers).find(th => th.getAttribute("data-key") === currentSortKey);
-    if (activeTh) {
-      activeTh.classList.add(currentSortOrder === "asc" ? "sorted-asc" : "sorted-desc");
-      activeTh.setAttribute("aria-sort", currentSortOrder === "asc" ? "ascending" : "descending");
+  // Seek on progress bar click
+  progressContainer.addEventListener("click", (e) => {
+    const rect = progressContainer.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const ratio = Math.min(Math.max(clickX / rect.width, 0), 1);
+    if (audio.duration && !isNaN(audio.duration)) {
+      audio.currentTime = ratio * audio.duration;
     }
-  }
-  updateSortHeaders();
+  });
 
-  // Playlists new button
+  // Search filter input event
+  searchInput.addEventListener("input", () => {
+    applyFiltersAndRender();
+  });
+
+  // Create new playlist
   btnNewPlaylist.addEventListener("click", () => {
-    const name = prompt("Enter new playlist name:");
-    if (!name || playlists[name]) {
-      alert("Invalid or duplicate playlist name.");
+    let name = prompt("Enter new playlist name:");
+    if (!name) return;
+    if (playlists[name]) {
+      alert("Playlist already exists.");
       return;
     }
     playlists[name] = [];
     currentPlaylist = name;
     renderPlaylists();
-    applyFiltersAndSort();
+    applyFiltersAndRender();
   });
 
-  // Dark mode toggle
-  function loadDarkModeSetting() {
-    const saved = localStorage.getItem("darkModeEnabled");
-    if (saved === "true") {
-      body.classList.add("dark");
-      darkModeCheckbox.checked = true;
-    }
-  }
-  darkModeCheckbox.addEventListener("change", () => {
-    if (darkModeCheckbox.checked) {
-      body.classList.add("dark");
-      localStorage.setItem("darkModeEnabled", "true");
-    } else {
-      body.classList.remove("dark");
-      localStorage.setItem("darkModeEnabled", "false");
-    }
-  });
-  loadDarkModeSetting();
-
-  // Initial load
+  // Initial load of tracks
   loadTracks();
-
 })();
 </script>
 </body>
