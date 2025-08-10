@@ -3,19 +3,19 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>iTunes Style Music Player</title>
+<title>iTunes Clone - Google Drive Music Player</title>
 <style>
-  /* Reset */
-  * {
+  /* Reset & base */
+  *, *::before, *::after {
     box-sizing: border-box;
   }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-      Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
-    margin: 0; padding: 0;
+    margin:0; padding:0;
+    font-family: "SF Pro Text","SF Pro Icons","Helvetica Neue",Helvetica,Arial,sans-serif;
     background: #fff;
     color: #000;
     user-select: none;
+    -webkit-font-smoothing: antialiased;
     height: 100vh;
     display: flex;
     flex-direction: column;
@@ -24,609 +24,958 @@
     background: #121212;
     color: #ddd;
   }
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
 
+  /* Container and layout */
   #app {
     display: flex;
     flex-direction: column;
     height: 100vh;
+    overflow: hidden;
   }
-
   header {
-    background: #f5f5f7;
-    padding: 10px 20px;
+    height: 52px;
+    background: linear-gradient(to bottom, #f5f5f5, #e8e8e8);
+    border-bottom: 1px solid #c0c0c0;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid #ccc;
+    padding: 0 10px;
   }
   body.dark header {
-    background: #1e1e1e;
-    border-color: #333;
-  }
-  header h1 {
-    margin: 0;
-    font-weight: 600;
-    font-size: 1.3rem;
+    background: linear-gradient(to bottom, #2a2a2a, #1a1a1a);
+    border-color: #444;
   }
 
-  .dark-toggle {
+  header h1 {
+    font-weight: 700;
+    font-size: 1.2rem;
+    flex: 1;
+    user-select: text;
+  }
+
+  /* Dark mode toggle */
+  #darkToggle {
+    margin-left: 10px;
     display: flex;
     align-items: center;
     cursor: pointer;
-    font-size: 0.9rem;
   }
-  .dark-toggle input {
-    margin-right: 8px;
+  #darkToggle input {
+    width: 40px;
+    height: 20px;
+    -webkit-appearance: none;
+    background: #ddd;
+    outline: none;
+    border-radius: 10px;
+    position: relative;
+    transition: background 0.3s;
     cursor: pointer;
   }
+  #darkToggle input:checked {
+    background: #4d90fe;
+  }
+  #darkToggle input::before {
+    content: "";
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    top: 1px;
+    left: 1px;
+    background: white;
+    transition: 0.3s;
+  }
+  #darkToggle input:checked::before {
+    transform: translateX(20px);
+  }
 
+  /* Main player container */
   main {
     flex: 1;
-    overflow: hidden;
+    display: flex;
+    background: #f0f0f0;
+    body.dark & {
+      background: #181818;
+    }
+  }
+
+  /* Sidebar (Playlist & Library navigation) - iTunes style left sidebar */
+  #sidebar {
+    width: 220px;
+    background: #f9f9f9;
+    border-right: 1px solid #c0c0c0;
     display: flex;
     flex-direction: column;
-    background: #fafafa;
   }
-  body.dark main {
-    background: #181818;
-  }
-
-  #search-bar {
-    padding: 10px 20px;
-    border-bottom: 1px solid #ccc;
-  }
-  body.dark #search-bar {
+  body.dark #sidebar {
+    background: #222;
     border-color: #333;
   }
-  #search-input {
-    width: 100%;
+  #sidebar header {
+    height: 48px;
+    font-weight: 600;
+    padding: 12px 15px;
+    border-bottom: 1px solid #c0c0c0;
     font-size: 1rem;
-    padding: 6px 10px;
-    border: 1px solid #aaa;
-    border-radius: 4px;
+    user-select: none;
   }
-  body.dark #search-input {
-    background: #222;
-    color: #ddd;
-    border-color: #555;
+  body.dark #sidebar header {
+    border-color: #444;
   }
 
-  table {
+  #playlistList {
+    flex: 1;
+    overflow-y: auto;
+    padding: 5px 0;
+  }
+  #playlistList button {
+    width: 100%;
+    padding: 10px 15px;
+    border: none;
+    background: transparent;
+    text-align: left;
+    font-size: 0.9rem;
+    color: #333;
+    cursor: pointer;
+    border-left: 4px solid transparent;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  #playlistList button:hover,
+  #playlistList button.active {
+    background: #d0d0d0;
+    border-left-color: #007aff;
+    color: #000;
+  }
+  body.dark #playlistList button {
+    color: #bbb;
+  }
+  body.dark #playlistList button:hover,
+  body.dark #playlistList button.active {
+    background: #333;
+    border-left-color: #4d90fe;
+    color: #fff;
+  }
+
+  /* Content area (track list and controls) */
+  #content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Search bar */
+  #searchBar {
+    padding: 8px 15px;
+    border-bottom: 1px solid #c0c0c0;
+    background: #fff;
+  }
+  body.dark #searchBar {
+    background: #121212;
+    border-color: #333;
+  }
+  #searchInput {
+    width: 100%;
+    padding: 6px 12px;
+    font-size: 1rem;
+    border: 1px solid #bbb;
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  #searchInput:focus {
+    border-color: #007aff;
+  }
+  body.dark #searchInput {
+    background: #222;
+    border-color: #444;
+    color: #eee;
+  }
+  body.dark #searchInput:focus {
+    border-color: #4d90fe;
+  }
+
+  /* Track list table */
+  #tracklistContainer {
+    flex: 1;
+    overflow-y: auto;
+    background: #fff;
+  }
+  body.dark #tracklistContainer {
+    background: #181818;
+  }
+  table#tracklist {
     width: 100%;
     border-collapse: collapse;
-    table-layout: fixed;
-    font-size: 0.95rem;
   }
-  thead {
-    background: #e0e0e0;
+  #tracklist thead {
+    background: #e5e5e5;
   }
-  body.dark thead {
-    background: #292929;
+  body.dark #tracklist thead {
+    background: #262626;
   }
-  th, td {
-    padding: 10px 8px;
-    text-align: left;
+  #tracklist thead th {
+    padding: 8px 12px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    user-select: none;
+    border-bottom: 1px solid #ccc;
+    white-space: nowrap;
+    position: relative;
+  }
+  body.dark #tracklist thead th {
+    border-color: #444;
+  }
+  #tracklist thead th.sortable:hover {
+    background: #d0d0d0;
+  }
+  body.dark #tracklist thead th.sortable:hover {
+    background: #333;
+  }
+  #tracklist thead th.sorted-asc::after,
+  #tracklist thead th.sorted-desc::after {
+    content: "";
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    border: 6px solid transparent;
+  }
+  #tracklist thead th.sorted-asc::after {
+    border-bottom-color: #007aff;
+    margin-top: -8px;
+  }
+  #tracklist thead th.sorted-desc::after {
+    border-top-color: #007aff;
+    margin-top: 2px;
+  }
+
+  #tracklist tbody tr {
+    cursor: pointer;
+    user-select: none;
+  }
+  #tracklist tbody tr:hover,
+  #tracklist tbody tr.playing {
+    background: #d0e7ff;
+  }
+  body.dark #tracklist tbody tr:hover,
+  body.dark #tracklist tbody tr.playing {
+    background: #004080;
+  }
+  #tracklist tbody td {
+    padding: 6px 12px;
+    font-size: 0.9rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  th.sortable {
-    cursor: pointer;
-    user-select: none;
-    position: relative;
-  }
-  th.sortable::after {
-    content: "▾";
-    font-size: 0.7rem;
-    color: #888;
-    position: absolute;
-    right: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    opacity: 0.3;
-  }
-  th.sortable.asc::after {
-    content: "▴";
-    opacity: 0.7;
-  }
-  th.sortable.desc::after {
-    content: "▾";
-    opacity: 0.7;
-  }
-  tbody tr {
-    cursor: pointer;
-    border-bottom: 1px solid #ddd;
-  }
-  body.dark tbody tr {
-    border-color: #333;
-  }
-  tbody tr:hover {
-    background: #d0d0d0;
-  }
-  body.dark tbody tr:hover {
-    background: #2a2a2a;
-  }
-  tbody tr.playing {
-    background: #b4d0ff;
-  }
-  body.dark tbody tr.playing {
-    background: #3355bb;
+  #tracklist tbody tr.playing td {
+    font-weight: 700;
+    color: #007aff;
   }
 
-  footer.player-controls {
-    padding: 10px 20px;
-    border-top: 1px solid #ccc;
-    background: #f5f5f7;
+  /* Player controls area */
+  #playerControls {
+    height: 90px;
+    background: #f5f5f5;
+    border-top: 1px solid #c0c0c0;
     display: flex;
     flex-direction: column;
-    user-select: none;
+    justify-content: center;
+    padding: 0 15px;
   }
-  body.dark footer.player-controls {
-    background: #1e1e1e;
+  body.dark #playerControls {
+    background: #222;
     border-color: #333;
   }
-  .player-top {
+
+  /* Controls top row: buttons, track info */
+  #controlsTop {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 10px;
-  }
-  .now-playing {
-    font-weight: 600;
-  }
-  .now-playing .artist {
-    margin-left: 6px;
-    font-weight: 400;
-    color: #666;
-  }
-  body.dark .now-playing .artist {
-    color: #aaa;
   }
 
-  .buttons {
-    display: flex;
-    gap: 10px;
-  }
-  .control-btn {
-    background: none;
+  /* Playback buttons */
+  .btn {
+    background: transparent;
     border: none;
-    font-size: 1.3rem;
     cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 4px;
-    transition: background 0.15s ease;
+    color: #444;
+    font-size: 1.6rem;
+    margin: 0 5px;
+    user-select: none;
+    outline-offset: 2px;
   }
-  .control-btn:hover, .control-btn:focus {
-    background: #ddd;
-    outline: none;
+  .btn:focus {
+    outline: 2px solid #007aff;
   }
-  body.dark .control-btn:hover, body.dark .control-btn:focus {
-    background: #444;
+  .btn:hover {
+    color: #007aff;
   }
-  .control-btn.active {
-    color: #0066ff;
+  body.dark .btn {
+    color: #bbb;
+  }
+  body.dark .btn:hover {
+    color: #4d90fe;
+  }
+  .btn.active {
+    color: #007aff;
+  }
+  /* Large play/pause button */
+  #btnPlayPause {
+    font-size: 2.4rem;
+    margin: 0 15px;
   }
 
-  .progress-container {
-    width: 100%;
-    height: 8px;
-    background: #ddd;
-    border-radius: 4px;
+  /* Track info text */
+  #currentTrackInfo {
+    flex: 1;
+    font-weight: 600;
+    font-size: 1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    user-select: text;
+    padding-left: 10px;
+  }
+  body.dark #currentTrackInfo {
+    color: #eee;
+  }
+
+  /* Progress bar container */
+  #progressContainer {
+    margin-top: 8px;
+    height: 10px;
+    background: #ccc;
+    border-radius: 5px;
     cursor: pointer;
     position: relative;
   }
-  body.dark .progress-container {
-    background: #333;
+  body.dark #progressContainer {
+    background: #444;
   }
-  .progress-filled {
+  #progressBar {
     height: 100%;
-    background: #0066ff;
+    background: #007aff;
     width: 0%;
-    border-radius: 4px;
+    border-radius: 5px;
     transition: width 0.1s linear;
   }
-
-  .time {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.8rem;
-    color: #444;
-    margin-top: 4px;
+  #progressContainer:hover {
+    opacity: 0.8;
   }
-  body.dark .time {
+
+  /* Time display */
+  #timeDisplay {
+    font-size: 0.8rem;
+    text-align: right;
+    margin-top: 2px;
+    color: #666;
+  }
+  body.dark #timeDisplay {
     color: #aaa;
   }
 
-  .volume-container {
-    margin-top: 10px;
+  /* Volume slider */
+  #volumeControl {
+    margin-left: 15px;
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 0.9rem;
   }
-  #volume-slider {
-    flex-grow: 1;
-  }
-
-  /* Scrollbar for table */
-  tbody {
-    display: block;
-    overflow-y: auto;
-    max-height: calc(100vh - 260px);
-  }
-  thead, tbody tr {
-    display: table;
-    width: 100%;
-    table-layout: fixed;
+  #volumeSlider {
+    cursor: pointer;
+    width: 90px;
   }
 
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: #bbb;
+    border-radius: 5px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  body.dark ::-webkit-scrollbar-thumb {
+    background-color: #555;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: #999;
+  }
+  body.dark ::-webkit-scrollbar-thumb:hover {
+    background-color: #777;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 700px) {
+    #sidebar {
+      display: none;
+    }
+  }
 </style>
 </head>
 <body>
-<div id="app" role="application" aria-label="iTunes style music player">
+<div id="app" role="main" aria-label="iTunes Music Player">
 
 <header>
-  <h1>iTunes Music Player</h1>
-  <label class="dark-toggle" for="dark-mode-checkbox">
-    <input type="checkbox" id="dark-mode-checkbox" aria-label="Toggle dark mode" />
-    Dark Mode
+  <h1>iTunes Clone Player</h1>
+  <label id="darkToggle" aria-label="Toggle dark mode">
+    <input type="checkbox" id="darkModeCheckbox" aria-checked="false" />
   </label>
 </header>
 
 <main>
-  <section id="search-bar">
-    <input type="search" id="search-input" placeholder="Search music..." aria-label="Search music"/>
-  </section>
-  <section id="tracklist-container" aria-live="polite" aria-atomic="true">
-    <table id="tracklist" role="grid" aria-label="Track list">
-      <thead>
-        <tr>
-          <th scope="col" class="sortable" data-key="title" tabindex="0" aria-sort="ascending">Title</th>
-          <th scope="col" class="sortable" data-key="artist" tabindex="0" aria-sort="none">Artist</th>
-          <th scope="col" class="sortable" data-key="album" tabindex="0" aria-sort="none">Album</th>
-          <th scope="col" style="text-align:right;" class="sortable" data-key="duration" tabindex="0" aria-sort="none">Duration</th>
-          <th scope="col" style="text-align:center;" class="sortable" data-key="genre" tabindex="0" aria-sort="none">Genre</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+  <nav id="sidebar" aria-label="Playlists">
+    <header>Playlists</header>
+    <div id="playlistList" tabindex="0" role="listbox" aria-activedescendant="playlist-all">
+      <!-- Playlists inserted here -->
+    </div>
+    <button id="btnNewPlaylist" style="margin:10px;padding:8px;font-weight:600;cursor:pointer;">+ New Playlist</button>
+  </nav>
+
+  <section id="content" aria-label="Track list and player controls">
+    <div id="searchBar">
+      <input id="searchInput" type="search" placeholder="Search" aria-label="Search tracks" />
+    </div>
+    <div id="tracklistContainer" tabindex="0" aria-label="Track list">
+      <table id="tracklist" aria-live="polite" aria-relevant="all" aria-rowcount="0" role="grid" aria-multiselectable="false">
+        <thead>
+          <tr>
+            <th class="sortable" data-key="trackNumber" scope="col" tabindex="0" aria-sort="none">#</th>
+            <th class="sortable" data-key="title" scope="col" tabindex="0" aria-sort="none">Name</th>
+            <th class="sortable" data-key="artist" scope="col" tabindex="0" aria-sort="none">Artist</th>
+            <th class="sortable" data-key="album" scope="col" tabindex="0" aria-sort="none">Album</th>
+            <th class="sortable" data-key="genre" scope="col" tabindex="0" aria-sort="none">Genre</th>
+            <th class="sortable" data-key="duration" scope="col" tabindex="0" aria-sort="none">Time</th>
+          </tr>
+        </thead>
+        <tbody id="tracklistBody" tabindex="0" role="rowgroup" aria-live="polite" aria-relevant="additions"></tbody>
+      </table>
+    </div>
+
+    <div id="playerControls" aria-label="Player controls">
+      <div id="controlsTop">
+        <div>
+          <button class="btn" id="btnShuffle" aria-pressed="false" title="Shuffle">&#128256;</button>
+          <button class="btn" id="btnPrev" aria-label="Previous Track" title="Previous">&#9194;</button>
+          <button class="btn" id="btnPlayPause" aria-label="Play/Pause" title="Play">&#9654;</button>
+          <button class="btn" id="btnNext" aria-label="Next Track" title="Next">&#9193;</button>
+          <button class="btn" id="btnRepeat" aria-pressed="false" title="Repeat">&#128257;</button>
+        </div>
+        <div id="currentTrackInfo" aria-live="polite" aria-atomic="true" aria-relevant="text">Loading...</div>
+        <div id="volumeControl" aria-label="Volume control">
+          <input type="range" id="volumeSlider" min="0" max="1" step="0.01" aria-valuemin="0" aria-valuemax="1" aria-valuenow="1" aria-label="Volume slider" />
+        </div>
+      </div>
+      <div id="progressContainer" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0" aria-label="Track progress">
+        <div id="progressBar"></div>
+      </div>
+      <div id="timeDisplay" aria-live="polite" aria-atomic="true">0:00 / 0:00</div>
+    </div>
   </section>
 </main>
-
-<footer class="player-controls" role="region" aria-label="Player controls">
-  <div class="player-top">
-    <div class="now-playing" aria-live="polite" aria-atomic="true">
-      <span id="np-title">-</span><span class="artist" id="np-artist"></span>
-    </div>
-    <div class="buttons">
-      <button class="control-btn" id="btn-prev" title="Previous Track" aria-label="Previous Track">⏮️</button>
-      <button class="control-btn" id="btn-playpause" title="Play/Pause" aria-label="Play or Pause">▶️</button>
-      <button class="control-btn" id="btn-next" title="Next Track" aria-label="Next Track">⏭️</button>
-      <button class="control-btn" id="btn-shuffle" title="Toggle Shuffle" aria-label="Shuffle">🔀</button>
-      <button class="control-btn" id="btn-repeat" title="Toggle Repeat" aria-label="Repeat">🔁</button>
-    </div>
-  </div>
-  <div class="progress-container" id="progress-bar" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0" aria-label="Playback progress">
-    <div class="progress-filled" id="progress-filled"></div>
-  </div>
-  <div class="time">
-    <span id="time-current">0:00</span>
-    <span id="time-duration">0:00</span>
-  </div>
-  <div class="volume-container">
-    <label for="volume-slider">Volume</label>
-    <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.7" aria-label="Volume control"/>
-  </div>
-</footer>
-</div>
 
 <script>
 (() => {
   "use strict";
 
-  // Sample playlist with CORS-enabled mp3 URLs (replace with your own)
-  const tracks = [
-    {
-      title: "Acoustic Breeze",
-      artist: "Benjamin Tissot",
-      album: "Calm",
-      genre: "Acoustic",
-      duration: "2:37",
-      url: "https://www.bensound.com/bensound-music/bensound-acousticbreeze.mp3"
-    },
-    {
-      title: "Sunny",
-      artist: "Benjamin Tissot",
-      album: "Happy",
-      genre: "Pop",
-      duration: "2:20",
-      url: "https://www.bensound.com/bensound-music/bensound-sunny.mp3"
-    },
-    {
-      title: "Energy",
-      artist: "Benjamin Tissot",
-      album: "Vibes",
-      genre: "Electronic",
-      duration: "2:56",
-      url: "https://www.bensound.com/bensound-music/bensound-energy.mp3"
-    }
-  ];
+  // User config — YOUR API KEY and FOLDER ID here
+  const API_KEY = "AIzaSyDsYE91wH7UDwu8eZNbD1CFuVcilgYeZhI";
+  const FOLDER_ID = "1DGz9zEQh29EAqTZpmWK5mwSj5HComnkn";
 
-  const tracklistBody = document.querySelector("#tracklist tbody");
-  const npTitle = document.getElementById("np-title");
-  const npArtist = document.getElementById("np-artist");
-  const btnPlayPause = document.getElementById("btn-playpause");
-  const btnNext = document.getElementById("btn-next");
-  const btnPrev = document.getElementById("btn-prev");
-  const btnShuffle = document.getElementById("btn-shuffle");
-  const btnRepeat = document.getElementById("btn-repeat");
-  const progressBar = document.getElementById("progress-bar");
-  const progressFilled = document.getElementById("progress-filled");
-  const timeCurrent = document.getElementById("time-current");
-  const timeDuration = document.getElementById("time-duration");
-  const volumeSlider = document.getElementById("volume-slider");
-  const searchInput = document.getElementById("search-input");
-  const darkModeCheckbox = document.getElementById("dark-mode-checkbox");
+  // DOM references
+  const body = document.body;
+  const darkModeCheckbox = document.getElementById("darkModeCheckbox");
+  const playlistList = document.getElementById("playlistList");
+  const btnNewPlaylist = document.getElementById("btnNewPlaylist");
+  const searchInput = document.getElementById("searchInput");
+  const tracklistBody = document.getElementById("tracklistBody");
+  const currentTrackInfo = document.getElementById("currentTrackInfo");
+  const btnPlayPause = document.getElementById("btnPlayPause");
+  const btnNext = document.getElementById("btnNext");
+  const btnPrev = document.getElementById("btnPrev");
+  const btnShuffle = document.getElementById("btnShuffle");
+  const btnRepeat = document.getElementById("btnRepeat");
+  const volumeSlider = document.getElementById("volumeSlider");
+  const progressContainer = document.getElementById("progressContainer");
+  const progressBar = document.getElementById("progressBar");
+  const timeDisplay = document.getElementById("timeDisplay");
 
-  let filteredTracks = [...tracks];
+  // Audio element
+  const audio = new Audio();
+  audio.crossOrigin = "anonymous";
+
+  // State
+  let tracks = [];  // All tracks loaded from Drive API
+  let filteredTracks = []; // filtered by search
   let currentTrackIndex = -1;
   let isPlaying = false;
   let shuffle = false;
   let repeat = false;
-  let currentSortKey = "title";
+  let playlists = { "All Songs": [] };
+  let currentPlaylist = "All Songs";
+
+  // Sorting state
+  let currentSortKey = "trackNumber";
   let currentSortOrder = "asc";
 
-  const audio = new Audio();
-  audio.crossOrigin = "anonymous";
+  // Utilities
 
-  // Load dark mode preference
-  if(localStorage.getItem("darkMode") === "true") {
-    document.body.classList.add("dark");
-    darkModeCheckbox.checked = true;
+  function formatTime(sec) {
+    sec = Math.floor(sec);
+    let m = Math.floor(sec / 60);
+    let s = sec % 60;
+    return m + ":" + (s < 10 ? "0" : "") + s;
   }
-  darkModeCheckbox.addEventListener("change", () => {
-    if(darkModeCheckbox.checked) {
-      document.body.classList.add("dark");
-      localStorage.setItem("darkMode", "true");
-    } else {
-      document.body.classList.remove("dark");
-      localStorage.setItem("darkMode", "false");
-    }
-  });
 
-  function updateSortHeaders() {
-    document.querySelectorAll("#tracklist thead th.sortable").forEach(th => {
-      th.classList.remove("asc","desc");
-      th.setAttribute("aria-sort", "none");
-      if(th.dataset.key === currentSortKey){
-        th.classList.add(currentSortOrder);
-        th.setAttribute("aria-sort", currentSortOrder==="asc"?"ascending":"descending");
-      }
+  // Fetch files from Google Drive folder via API, paginated
+  async function fetchDriveFiles(pageToken = "") {
+    const baseURL = "https://www.googleapis.com/drive/v3/files";
+    const params = new URLSearchParams({
+      q: `'${FOLDER_ID}' in parents and mimeType contains 'audio/' and trashed = false`,
+      fields: `nextPageToken, files(id, name, mimeType, size, createdTime)`,
+      pageSize: "1000",
+      key: API_KEY,
+      pageToken
     });
+    const url = `${baseURL}?${params.toString()}`;
+
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error(`API error: ${resp.status}`);
+      const data = await resp.json();
+      return data;
+    } catch (e) {
+      alert("Error loading files from Google Drive: " + e.message);
+      return null;
+    }
   }
 
-  function formatTime(seconds) {
-    if(isNaN(seconds)) return "0:00";
-    const m = Math.floor(seconds/60);
-    const s = Math.floor(seconds%60);
-    return m+":"+s.toString().padStart(2,"0");
+  // Parse track metadata from filename: format "01 - Title - Artist - Album - Genre.mp3"
+  // You can improve this parser if your filenames have different format.
+  function parseTrackMetadata(filename, index) {
+    let baseName = filename.replace(/\.[^/.]+$/, ""); // remove extension
+    // Split by " - ", max 5 parts: track#, title, artist, album, genre
+    let parts = baseName.split(" - ");
+    return {
+      id: null, // set later from file id
+      trackNumber: index + 1,
+      title: parts[1] || parts[0] || filename,
+      artist: parts[2] || "Unknown Artist",
+      album: parts[3] || "Unknown Album",
+      genre: parts[4] || "Unknown Genre",
+      duration: 0, // unknown yet
+      fileName: filename,
+      mimeType: "",
+      fileId: null,
+      url: "", // will be built
+    };
   }
 
-  function sortAndRender() {
-    filteredTracks.sort((a,b) => {
-      let va = a[currentSortKey] || "";
-      let vb = b[currentSortKey] || "";
-
-      if(currentSortKey === "duration"){
-        // convert mm:ss to seconds for sorting
-        const toSeconds = str => {
-          const parts = str.split(":");
-          if(parts.length!==2) return 0;
-          return parseInt(parts[0],10)*60 + parseInt(parts[1],10);
-        };
-        va = toSeconds(va);
-        vb = toSeconds(vb);
+  // Sort tracks by key & order
+  function sortTracks(arr, key, order) {
+    let sorted = [...arr];
+    sorted.sort((a,b) => {
+      let va = a[key], vb = b[key];
+      if (key === "trackNumber" || key === "duration") {
+        va = Number(va);
+        vb = Number(vb);
       } else {
-        va = va.toString().toLowerCase();
-        vb = vb.toString().toLowerCase();
+        va = va.toLowerCase();
+        vb = vb.toLowerCase();
       }
-      if(va < vb) return currentSortOrder === "asc" ? -1 : 1;
-      if(va > vb) return currentSortOrder === "asc" ? 1 : -1;
+      if (va < vb) return order === "asc" ? -1 : 1;
+      if (va > vb) return order === "asc" ? 1 : -1;
       return 0;
     });
-    renderTrackList();
-    updateSortHeaders();
+    return sorted;
   }
 
-  function renderTrackList(){
+  // Render track list rows
+  function renderTrackList(tracksToRender) {
     tracklistBody.innerHTML = "";
-    filteredTracks.forEach((track,i) => {
+    tracksToRender.forEach((track, i) => {
       const tr = document.createElement("tr");
+      tr.setAttribute("data-index", i);
+      if (i === currentTrackIndex) tr.classList.add("playing");
       tr.tabIndex = 0;
-      if(i===currentTrackIndex) tr.classList.add("playing");
-      tr.dataset.index = i;
+      tr.role = "row";
+
+      // Columns: #, Title, Artist, Album, Genre, Time
       tr.innerHTML = `
-        <td title="${track.title}">${track.title}</td>
-        <td title="${track.artist}">${track.artist}</td>
-        <td title="${track.album}">${track.album}</td>
-        <td style="text-align:right;">${track.duration}</td>
-        <td style="text-align:center;">${track.genre}</td>
+        <td role="gridcell">${track.trackNumber}</td>
+        <td role="gridcell" title="${track.title}">${track.title}</td>
+        <td role="gridcell" title="${track.artist}">${track.artist}</td>
+        <td role="gridcell" title="${track.album}">${track.album}</td>
+        <td role="gridcell" title="${track.genre}">${track.genre}</td>
+        <td role="gridcell">${formatTime(track.duration)}</td>
       `;
+
+      tr.addEventListener("click", () => {
+        playTrack(i);
+      });
+      tr.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          playTrack(i);
+        }
+      });
+
       tracklistBody.appendChild(tr);
     });
+    tracklistBody.parentElement.setAttribute("aria-rowcount", tracksToRender.length);
   }
 
-  function playTrack(index) {
-    if(index < 0 || index >= filteredTracks.length) return;
-    const track = filteredTracks[index];
-    currentTrackIndex = index;
-    renderTrackList();
+  // Render playlist list
+  function renderPlaylists() {
+    playlistList.innerHTML = "";
+    Object.keys(playlists).forEach(plName => {
+      const btn = document.createElement("button");
+      btn.textContent = plName;
+      btn.id = `playlist-${plName.replace(/\s/g,"-").toLowerCase()}`;
+      btn.className = plName === currentPlaylist ? "active" : "";
+      btn.setAttribute("role", "option");
+      btn.setAttribute("aria-selected", plName === currentPlaylist ? "true" : "false");
+      btn.addEventListener("click", () => {
+        currentPlaylist = plName;
+        applyFiltersAndSort();
+        renderPlaylists();
+      });
+      playlistList.appendChild(btn);
+    });
+  }
 
+  // Play track by index from filteredTracks
+  function playTrack(index) {
+    if (index < 0 || index >= filteredTracks.length) return;
+    currentTrackIndex = index;
+    const track = filteredTracks[index];
     audio.src = track.url;
-    audio.play().catch(err => {
-      console.error("Play error:", err);
-      alert(`Playback failed: ${err.message}`);
+    audio.play().catch(e => {
+      console.warn("Play error:", e);
     });
     isPlaying = true;
-    btnPlayPause.textContent = "⏸️";
-    npTitle.textContent = track.title || "-";
-    npArtist.textContent = track.artist ? ` — ${track.artist}` : "";
+    updatePlayPauseButton();
+    updateTrackHighlight();
+    updateCurrentTrackInfo();
   }
 
-  function playNext() {
-    if(shuffle){
-      let randIndex;
-      do {
-        randIndex = Math.floor(Math.random()*filteredTracks.length);
-      } while(randIndex === currentTrackIndex && filteredTracks.length > 1);
-      playTrack(randIndex);
+  // Update UI play/pause button
+  function updatePlayPauseButton() {
+    btnPlayPause.innerHTML = isPlaying ? "&#10073;&#10073;" : "&#9654;";
+    btnPlayPause.setAttribute("aria-label", isPlaying ? "Pause" : "Play");
+  }
+
+  // Update track highlight in list
+  function updateTrackHighlight() {
+    const trs = tracklistBody.querySelectorAll("tr");
+    trs.forEach((tr, i) => {
+      tr.classList.toggle("playing", i === currentTrackIndex);
+    });
+  }
+
+  // Update current track info display
+  function updateCurrentTrackInfo() {
+    if (currentTrackIndex < 0 || currentTrackIndex >= filteredTracks.length) {
+      currentTrackInfo.textContent = "No track selected";
       return;
     }
-    if(currentTrackIndex + 1 < filteredTracks.length) {
-      playTrack(currentTrackIndex + 1);
-    } else {
-      if(repeat) {
-        playTrack(0);
-      } else {
-        audio.pause();
-        isPlaying = false;
-        btnPlayPause.textContent = "▶️";
+    const t = filteredTracks[currentTrackIndex];
+    currentTrackInfo.textContent = `${t.title} — ${t.artist} [${t.album}]`;
+  }
+
+  // Apply search filter, playlist filter, and sorting, then render
+  function applyFiltersAndSort() {
+    let plTracks = playlists[currentPlaylist] || [];
+    // filter by search
+    const searchTerm = searchInput.value.trim().toLowerCase();
+    filteredTracks = plTracks.filter(t => {
+      if (!searchTerm) return true;
+      return (
+        t.title.toLowerCase().includes(searchTerm) ||
+        t.artist.toLowerCase().includes(searchTerm) ||
+        t.album.toLowerCase().includes(searchTerm) ||
+        t.genre.toLowerCase().includes(searchTerm)
+      );
+    });
+    // sort
+    filteredTracks = sortTracks(filteredTracks, currentSortKey, currentSortOrder);
+    renderTrackList(filteredTracks);
+  }
+
+  // Load track durations by preloading audio metadata asynchronously
+  async function loadTrackDurations() {
+    for (let i = 0; i < tracks.length; i++) {
+      const track = tracks[i];
+      try {
+        track.duration = await new Promise((resolve) => {
+          const au = new Audio();
+          au.src = track.url;
+          au.preload = "metadata";
+          au.addEventListener("loadedmetadata", () => {
+            resolve(au.duration);
+            au.remove();
+          });
+          au.addEventListener("error", () => {
+            resolve(0);
+            au.remove();
+          });
+        });
+      } catch {
+        track.duration = 0;
       }
     }
   }
 
-  function playPrev() {
-    if(currentTrackIndex > 0) {
-      playTrack(currentTrackIndex - 1);
-    } else {
-      if(repeat) {
-        playTrack(filteredTracks.length -1);
-      } else {
-        audio.currentTime = 0;
-      }
-    }
+  // Build playable URL from Google Drive file ID using "uc?export=download" format (avoids CORS)
+  function buildPlayableUrl(fileId) {
+    return `https://drive.google.com/uc?export=download&id=${fileId}`;
   }
 
-  function togglePlayPause() {
-    if(!audio.src && filteredTracks.length > 0){
-      playTrack(0);
-      return;
-    }
-    if(isPlaying) {
-      audio.pause();
-      isPlaying = false;
-      btnPlayPause.textContent = "▶️";
-    } else {
-      audio.play().catch(() => {});
-      isPlaying = true;
-      btnPlayPause.textContent = "⏸️";
-    }
+  // Fetch and prepare all tracks
+  async function loadTracks() {
+    let allFiles = [];
+    let nextPageToken = "";
+    do {
+      const data = await fetchDriveFiles(nextPageToken);
+      if (!data) break;
+      allFiles = allFiles.concat(data.files);
+      nextPageToken = data.nextPageToken || "";
+    } while (nextPageToken);
+
+    tracks = allFiles
+      .filter(f => f.mimeType.startsWith("audio/"))
+      .map((f, idx) => {
+        let track = parseTrackMetadata(f.name, idx);
+        track.fileId = f.id;
+        track.mimeType = f.mimeType;
+        track.url = buildPlayableUrl(f.id);
+        track.id = f.id;
+        return track;
+      });
+
+    // Set default playlist "All Songs"
+    playlists["All Songs"] = [...tracks];
+    currentPlaylist = "All Songs";
+
+    // Load durations asynchronously
+    await loadTrackDurations();
+
+    // Initial sort
+    applyFiltersAndSort();
+    renderPlaylists();
+
+    currentTrackIndex = -1;
+    updateCurrentTrackInfo();
   }
 
-  audio.addEventListener("timeupdate", () => {
-    if(!audio.duration) return;
-    const percent = (audio.currentTime / audio.duration) * 100;
-    progressFilled.style.width = percent + "%";
-    progressBar.setAttribute("aria-valuenow", Math.floor(percent));
-    timeCurrent.textContent = formatTime(audio.currentTime);
-    timeDuration.textContent = formatTime(audio.duration);
-  });
+  // Audio events
 
   audio.addEventListener("ended", () => {
-    playNext();
+    if (repeat) {
+      playTrack(currentTrackIndex);
+    } else if (shuffle) {
+      let randIndex;
+      do {
+        randIndex = Math.floor(Math.random() * filteredTracks.length);
+      } while (randIndex === currentTrackIndex && filteredTracks.length > 1);
+      playTrack(randIndex);
+    } else {
+      playTrack(currentTrackIndex + 1);
+    }
   });
 
-  progressBar.addEventListener("click", e => {
-    const rect = progressBar.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const percent = clickX / rect.width;
-    if(audio.duration) {
-      audio.currentTime = percent * audio.duration;
+  audio.addEventListener("timeupdate", () => {
+    if (!audio.duration || isNaN(audio.duration)) return;
+    const progressPercent = (audio.currentTime / audio.duration) * 100;
+    progressBar.style.width = `${progressPercent}%`;
+    progressContainer.setAttribute("aria-valuenow", progressPercent.toFixed(0));
+    timeDisplay.textContent = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
+  });
+
+  // Control handlers
+
+  btnPlayPause.addEventListener("click", () => {
+    if (isPlaying) {
+      audio.pause();
+      isPlaying = false;
+    } else {
+      if (currentTrackIndex === -1 && filteredTracks.length > 0) {
+        playTrack(0);
+      } else {
+        audio.play().catch(() => {});
+        isPlaying = true;
+      }
     }
+    updatePlayPauseButton();
+  });
+
+  btnNext.addEventListener("click", () => {
+    if (shuffle) {
+      let randIndex;
+      do {
+        randIndex = Math.floor(Math.random() * filteredTracks.length);
+      } while (randIndex === currentTrackIndex && filteredTracks.length > 1);
+      playTrack(randIndex);
+    } else {
+      playTrack(currentTrackIndex + 1);
+    }
+  });
+
+  btnPrev.addEventListener("click", () => {
+    playTrack(currentTrackIndex - 1);
+  });
+
+  btnShuffle.addEventListener("click", () => {
+    shuffle = !shuffle;
+    btnShuffle.setAttribute("aria-pressed", shuffle.toString());
+    btnShuffle.classList.toggle("active", shuffle);
+  });
+
+  btnRepeat.addEventListener("click", () => {
+    repeat = !repeat;
+    btnRepeat.setAttribute("aria-pressed", repeat.toString());
+    btnRepeat.classList.toggle("active", repeat);
   });
 
   volumeSlider.addEventListener("input", () => {
     audio.volume = volumeSlider.value;
+    volumeSlider.setAttribute("aria-valuenow", volumeSlider.value);
   });
 
-  btnPlayPause.addEventListener("click", togglePlayPause);
-  btnNext.addEventListener("click", playNext);
-  btnPrev.addEventListener("click", playPrev);
-  btnShuffle.addEventListener("click", () => {
-    shuffle = !shuffle;
-    btnShuffle.classList.toggle("active", shuffle);
-  });
-  btnRepeat.addEventListener("click", () => {
-    repeat = !repeat;
-    btnRepeat.classList.toggle("active", repeat);
-  });
-
-  tracklistBody.addEventListener("click", e => {
-    let tr = e.target.closest("tr");
-    if(tr) {
-      const idx = parseInt(tr.dataset.index, 10);
-      if(!isNaN(idx)) {
-        playTrack(idx);
-      }
+  progressContainer.addEventListener("click", (e) => {
+    const rect = progressContainer.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const width = rect.width;
+    const clickRatio = clickX / width;
+    if (!isNaN(audio.duration)) {
+      audio.currentTime = clickRatio * audio.duration;
     }
   });
 
-  // Keyboard navigation for track list
-  tracklistBody.addEventListener("keydown", e => {
-    let tr = e.target.closest("tr");
-    if(!tr) return;
-    let idx = parseInt(tr.dataset.index, 10);
-    if(isNaN(idx)) return;
-    if(e.key === "Enter" || e.key === " ") {
-      playTrack(idx);
-      e.preventDefault();
-    } else if(e.key === "ArrowDown") {
-      e.preventDefault();
-      let next = tr.nextElementSibling || tracklistBody.firstElementChild;
-      next.focus();
-    } else if(e.key === "ArrowUp") {
-      e.preventDefault();
-      let prev = tr.previousElementSibling || tracklistBody.lastElementChild;
-      prev.focus();
-    }
-  });
-
-  // Search filter
+  // Search input handler
   searchInput.addEventListener("input", () => {
-    const term = searchInput.value.trim().toLowerCase();
-    filteredTracks = tracks.filter(t => 
-      t.title.toLowerCase().includes(term) ||
-      t.artist.toLowerCase().includes(term) ||
-      t.album.toLowerCase().includes(term) ||
-      t.genre.toLowerCase().includes(term)
-    );
-    sortAndRender();
+    applyFiltersAndSort();
   });
 
-  // Sorting columns
-  document.querySelectorAll("#tracklist thead th.sortable").forEach(th => {
+  // Sort headers click & keyboard
+  const headers = document.querySelectorAll("#tracklist thead th.sortable");
+  headers.forEach(th => {
     th.addEventListener("click", () => {
-      const key = th.dataset.key;
-      if(currentSortKey === key){
+      const key = th.getAttribute("data-key");
+      if (currentSortKey === key) {
         currentSortOrder = currentSortOrder === "asc" ? "desc" : "asc";
       } else {
         currentSortKey = key;
         currentSortOrder = "asc";
       }
-      sortAndRender();
+      updateSortHeaders();
+      applyFiltersAndSort();
     });
     th.addEventListener("keydown", e => {
-      if(e.key === "Enter" || e.key === " ") {
+      if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
         th.click();
       }
     });
   });
 
-  // Initial render
-  sortAndRender();
-})();
+  function updateSortHeaders() {
+    headers.forEach(th => {
+      th.classList.remove("sorted-asc", "sorted-desc");
+      th.setAttribute("aria-sort", "none");
+    });
+    const activeHeader = Array.from(headers).find(h => h.getAttribute("data-key") === currentSortKey);
+    if (activeHeader) {
+      activeHeader.classList.add(currentSortOrder === "asc" ? "sorted-asc" : "sorted-desc");
+      activeHeader.setAttribute("aria-sort", currentSortOrder === "asc" ? "ascending" : "descending");
+    }
+  }
 
+  // Playlist creation (basic)
+  btnNewPlaylist.addEventListener("click", () => {
+    const name = prompt("Enter new playlist name:");
+    if (!name) return;
+    if (playlists[name]) {
+      alert("Playlist already exists.");
+      return;
+    }
+    playlists[name] = [];
+    currentPlaylist = name;
+    applyFiltersAndSort();
+    renderPlaylists();
+  });
+
+  // Initialize dark mode from localStorage
+  function initDarkMode() {
+    const saved = localStorage.getItem("darkMode");
+    if (saved === "true") {
+      body.classList.add("dark");
+      darkModeCheckbox.checked = true;
+      darkModeCheckbox.setAttribute("aria-checked", "true");
+    } else {
+      body.classList.remove("dark");
+      darkModeCheckbox.checked = false;
+      darkModeCheckbox.setAttribute("aria-checked", "false");
+    }
+  }
+  darkModeCheckbox.addEventListener("change", () => {
+    if (darkModeCheckbox.checked) {
+      body.classList.add("dark");
+      darkModeCheckbox.setAttribute("aria-checked", "true");
+      localStorage.setItem("darkMode", "true");
+    } else {
+      body.classList.remove("dark");
+      darkModeCheckbox.setAttribute("aria-checked", "false");
+      localStorage.setItem("darkMode", "false");
+    }
+  });
+
+  // Keyboard shortcuts (space=play/pause, left/right=seek, up/down=volume)
+  window.addEventListener("keydown", (e) => {
+    if (e.target.tagName === "INPUT") return; // ignore typing
+    switch(e.key) {
+      case " ":
+        e.preventDefault();
+        btnPlayPause.click();
+        break;
+      case "ArrowRight":
+        audio.currentTime = Math.min(audio.currentTime + 5, audio.duration || audio.currentTime);
+        break;
+      case "ArrowLeft":
+        audio.currentTime = Math.max(audio.currentTime - 5, 0);
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        volumeSlider.value = Math.min(+volumeSlider.value + 0.05, 1);
+        volumeSlider.dispatchEvent(new Event("input"));
+        break;
+      case "ArrowDown":
+        e.preventDefault();
+        volumeSlider.value = Math.max(+volumeSlider.value - 0.05, 0);
+        volumeSlider.dispatchEvent(new Event("input"));
+        break;
+    }
+  });
+
+  // Initial setup
+  (async () => {
+    initDarkMode();
+    volumeSlider.value = 1;
+    audio.volume = 1;
+    updateSortHeaders();
+    await loadTracks();
+  })();
+
+})();
 </script>
 </body>
 </html>
